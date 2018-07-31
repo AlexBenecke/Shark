@@ -1,0 +1,524 @@
+---
+title: "Data Prep"
+author: "Alex Benecke"
+date: "July 30, 2018"
+output:  
+  html_document: 
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    fig_width: 8
+    fig_height: 6
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load Packages, include=FALSE}
+require(FSA)
+require(tidyverse)
+require(dplyr)
+require(magrittr)
+require(scales)
+
+
+source("5_functions/taxa-function.R")
+```
+
+## Data Exploration ##
+
+### Hist plots
+
+
+## Creating New Variables ##
+
+```{r Load CPUE data}
+eff <- read.csv("data/raw-data/CPUE.csv", na.strings = "") %>%
+  arrange(YEAR,GOM_AREA,END_GMT)
+
+str(eff)
+headtail(eff)
+```
+
+
+
+### AVG.DEPTH
+
+```{r Create AVG.DEPTH}
+### Find STARTDEPTH and ENDDEPTH Variables
+
+head(eff[,c(8,12)])
+
+### Average STARTDEPTH and ENDDEPTH and save as AVG.DEPTH
+
+eff$AVG.DEPTH <- apply(eff[,c(8,12)], 1, FUN=mean) 
+
+range(eff$AVG.DEPTH, na.rm = TRUE)
+```
+
+### Month
+```{r Create Month Variable }
+
+head(eff$START_GMT)
+
+str(eff$START_GMT)
+### Format START_GMT as Date
+
+eff$START_GMT <- strptime(eff$START_GMT, format = "%m/%d/%Y")
+
+str(eff$START_GMT)
+
+eff$MONTH <- format.Date(eff$START_GMT, format = "%m")
+
+str(eff$MONTH)
+```
+
+
+### Distance to shore
+
+```{r Load packages needed to create distance to shore variable, eval=FALSE}
+require(rgdal)   # for readOGR(...); loads package sp as well
+require(rgeos)   # for gDistance(...)
+
+
+require(parallel) # for detect cores
+require(foreach)   # for foreach(...)
+require(snow)      # for makeCluster(...)
+require(doSNOW)    # for resisterDoSNOW(...)
+```
+
+
+```{r Distance to Shore Variable, eval=FALSE}
+eff$Long <- eff$STARTLON
+eff$Lat <- eff$STARTLAT
+
+head(eff)
+str(eff)
+
+wgs.84    <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+mollweide <- "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+sp.points <- SpatialPoints(eff[,c("Long","Lat")], proj4string=CRS(wgs.84))
+
+path <- "data/shape-file/ne_10m_coastline/ne_10m_coastline.shp"
+
+coast  <- rgdal::readOGR(dsn=path,layer="ne_10m_coastline",p4s=wgs.84)
+
+coast.moll <- spTransform(coast,CRS(mollweide))
+
+point.moll <- spTransform(sp.points,CRS(mollweide))
+
+no_cores <- detectCores()
+
+cl <- makeCluster(no_cores,type="SOCK")  # create a 4-processor cluster
+registerDoSNOW(cl)                # register the cluster
+
+get.dist.parallel <- function(n) {
+  foreach(i=1:n, .combine=c, .packages="rgeos", .inorder=TRUE, 
+          .export=c("point.moll","coast.moll")) %dopar% gDistance(point.moll[i],coast.moll)
+}
+
+eff$Dis.to.SHORE <- get.dist.parallel(length(sp.points))
+
+eff$Dis.to.SHORE <- eff$Dis.to.SHORE/1000
+
+head(eff)
+str(eff)
+```
+
+
+```{r Plot points and shoreline, echo = FALSE}
+
+gulf.shape <- "data/shape-file/Shape/stateshigh.shp"
+gulf.shape <- maptools::readShapePoly(gulf.shape)
+
+plot(eff$Long, eff$Lat,
+     xlim = c(-97.5, -80.7), ylim = c(25, 30.5),
+     xlab ="Longitude", ylab = "Latitude",
+     pch = 19)
+par(new=T)
+sp::plot(gulf.shape, add= T,
+         xlim = c(-97.5, -80.7), ylim = c(25, 30.5),
+         col = "gray")
+
+```
+
+
+### Saving changes to CPUE2.csv 
+
+```{r}
+
+#7-31-18#write.csv(eff,file = "data/raw-data/CPUE2.csv", row.names = FALSE)
+
+```
+
+
+## QA/QC ##
+
+
+1. Load CPUE2.csv data, Extract CPUE for all species and save in a list called sp.df
+
+```{r Load Data}
+source("5_functions/taxa-function.R")
+
+eff2 <- read.csv("data/raw-data/CPUE2.csv")
+
+str(eff2)
+
+sp.df <- list(blacknose.df = acronotus.df <- extract.taxa.df.fun(eff2,
+                             eff2$CARCHARHINUS.ACRONOTUS),
+              
+              blacktip.df = extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.LIMBATUS),
+              
+              bull.df = extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.LEUCAS),
+              
+              sandbar.df = extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.PLUMBEUS),
+              
+              sharpnose.df = extract.taxa.df.fun(eff2,
+                                     eff2$RHIZOPRIONODON.TERRAENOVAE),
+              
+              silky.df = extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.FALCIFORMIS),
+              
+              spinner.df = extract.taxa.df.fun(eff2,
+                                    eff2$CARCHARHINUS.BREVIPINNA),
+              
+              tiger.df = extract.taxa.df.fun(eff2,
+                                     eff2$GALEOCERDO.CUVIER))
+
+str(sp.df$sharpnose.df)
+head(sp.df$sharpnose.df)
+```
+
+2. Plot CPUE for all Species vs all Explanatory variables
+
+```{r Plot cpe vs all vars, echo = FALSE}
+for(i in 1:length(sp.df)){
+  
+  oldpar <- par(mfrow=c(3,4), mar=c(5,4,2,1), oma=c(1,0,3,1))
+  
+  plot(cpe~YEAR,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$YEAR, sp.df[[i]]$cpe)),
+        side=3,line=0)
+  
+  plot(cpe~MONTH,
+       data = sp.df[[i]])
+  
+  plot(cpe~AVG.DEPTH,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$AVG.DEPTH, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+  
+  plot(cpe~SALBOTM,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$SALBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+  
+  plot(cpe~TEMPBOTM,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$TEMPBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+  
+  plot(cpe~FLUOROBOTM,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$FLUOROBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+  
+  plot(cpe~TURBBOTM,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$TURBBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+  
+  plot(cpe~OXYBOTM,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$OXYBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+  
+  plot(cpe~dombot8,
+       data = sp.df[[i]],
+       xlab="", las=2)
+  
+  plot(cpe~Dis.to.SHORE,
+       data = sp.df[[i]],
+       las=2)
+    mtext(paste0("r = ",
+               cor(sp.df[[i]]$Dis.to.SHORE, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+
+  plot(cpe~STARTLAT,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$STARTLAT, sp.df[[i]]$cpe)),
+        side=3,line=0)
+  
+  plot(cpe~STARTLON,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$STARTLON, sp.df[[i]]$cpe)),
+        side=3,line=0)
+  
+  mtext(names(sp.df[i]), side=3, line=0.65, outer=TRUE, cex=2, 
+        font=2)
+  
+  par(oldpar)
+}
+```
+
+
+3. Identify outliers
+
+```{r QAQC}
+### QA QC
+
+par(mfrow=c(1,1))
+plot(eff2$STARTLON,eff2$STARTLAT)
+
+
+summary(eff2[c(6:8,12,38:50)])
+
+#### outlier notes
+
+plot(eff2$SALBOTM, eff2$CARCHARHINUS.ACRONOTUS)
+
+
+range(eff2$SALBOTM, na.rm = TRUE)
+
+(rm.Sal <- which(eff2$SALBOTM > 40 | eff2$SALBOTM < 15)) ### 507  932 2705 2770 2771 2941 2979
+
+eff2[c(rm.Sal),c(1,42)]
+
+#(rm.EndLon <- which(eff2$ENDLON > -80)) ### 1465 >>> just always use STARTLON and STARTLAT
+
+
+range(eff2$OXYBOTM, na.rm = TRUE)
+
+(oxy <- which(eff2$OXYBOTM == 0))
+
+eff2[c(oxy),]
+
+
+(rm.Oxy <- which(eff2$OXYBOTM > 12 | eff2$OXYBOTM == 0)) ### 99 100 338 339 411 625 652 823 824 
+
+eff2[c(rm.Oxy),c(1,41,43:50)]
+
+
+ ### TURBBOTM and FLUOROBOTM are not used as explanitory variables so there is no need to remove outliers
+
+plot(eff2$TURBBOTM, eff2$CARCHARHINUS.ACRONOTUS)
+
+range(eff2$TURBBOTM , na.rm=T)
+
+(rm.Turb <- which(eff2$TURBBOTM > 100 | eff2$TURBBOTM <= 0)) ### 1994
+
+eff2[c(rm.Turb),]
+
+#(rm.Fluo <-which(eff2$FLUOROBOTM > 30)) ### 1536, 1802, 2230, 2660, 2704
+
+
+(n.rm <- length(rm.Sal) + length(rm.Oxy) + length(rm.Turb))
+
+```
+
+4. remove outliers and create individual data frames for each species save as .csv file
+
+```{r Create sp.df, eval = FALSE}
+
+
+  ### round 1 ###rm.EndLon
+(rm1 <- c(rm.Sal,rm.Oxy, rm.Turb) %>%
+   sort())
+
+### round 2
+#(rm2 <- c(rm.Oxy, rm.Turb, rm.Fluo))
+
+
+
+
+eff2 <- eff2[-c(rm1),]
+######
+
+str(eff2)
+#write.csv(eff2,"data/CPUE3.csv", row.names = FALSE)
+
+(sp.list <- colnames(eff2[,c(43:50)]))
+
+##  which(names(eff) %in%  (sp.list <- colnames(eff[,c(43:50)])) )
+
+
+
+
+
+
+### CARCHARHINUS.ACRONOTUS
+
+acronotus <- extract.taxa.df.fun(eff2,
+                             eff2$CARCHARHINUS.ACRONOTUS) #%>%
+#  write.csv(file = "data/clean-data/acronotus.csv", row.names = FALSE)
+
+
+### CARCHARHINUS.BREVIPINNA
+
+brevipinna <- extract.taxa.df.fun(eff2,
+                                    eff2$CARCHARHINUS.BREVIPINNA) #%>%
+#  write.csv(file = "data/clean-data/brevipinna.csv", row.names = FALSE)
+
+
+
+### CARCHARHINUS.FALCIFORMIS
+
+falciformis <- extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.FALCIFORMIS) #%>%
+#  write.csv(file = "data/clean-data/falciformis.csv", row.names = FALSE)
+
+
+
+### CARCHARHINUS.LEUCAS
+
+leucas <- extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.LEUCAS) #%>%
+#  write.csv(file = "data/clean-data/leucas.csv", row.names = FALSE)
+
+
+
+### CARCHARHINUS.LIMBATUS
+
+limbatus <- extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.LIMBATUS)# %>%
+#  write.csv(file = "data/clean-data/limbatus.csv", row.names = FALSE)
+
+
+
+### CARCHARHINUS.PLUMBEUS
+
+plumbeus <- extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.PLUMBEUS) %>%
+#  write.csv(file = "data/clean-data/plumbeus.csv", row.names = FALSE)
+
+
+
+### GALEOCERDO.CUVIER
+
+cuvier <- extract.taxa.df.fun(eff2,
+                                     eff2$GALEOCERDO.CUVIER) %>%
+#  write.csv(file = "data/clean-data/cuvier.csv", row.names = FALSE)
+
+
+
+### RHIZOPRIONODON.TERRAENOVAE
+
+terraenovae <- extract.taxa.df.fun(eff2,
+                                     eff2$RHIZOPRIONODON.TERRAENOVAE) %>%
+#  write.csv(file = "data/clean-data/terraenovae.csv", row.names = FALSE)
+
+```
+
+5. Load newly created .csv files and save to sp.df list
+
+```{r}
+sp.df <- list(blacknose = read.csv("data/clean-data/acronotus.csv"),
+              blacktip = read.csv("data/clean-data/limbatus.csv"),
+              bull = read.csv("data/clean-data/leucas.csv"),
+              sandbar = read.csv("data/clean-data/plumbeus.csv"),
+              sharpnose = read.csv("data/clean-data/terraenovae.csv"),
+              silky = read.csv("data/clean-data/falciformis.csv"),
+              spinner = read.csv("data/clean-data/brevipinna.csv"),
+              tiger = read.csv("data/clean-data/cuvier.csv"))
+```
+
+6. make new cpue plots and make sure outliers are gone.
+
+```{r New Plot cpe vs all vars, echo=FALSE}
+for(i in 1:length(sp.df)){
+  
+  oldpar <- par(mfrow=c(3,4), mar=c(5,4,2,1), oma=c(1,0,3,1))
+  
+  plot(cpe~YEAR,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$YEAR, sp.df[[i]]$cpe)),
+        side=3,line=0)
+  
+  plot(cpe~MONTH,
+       data = sp.df[[i]])
+  
+  plot(cpe~AVG.DEPTH,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$AVG.DEPTH, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+  
+  plot(cpe~SALBOTM,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$SALBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+  
+  plot(cpe~TEMPBOTM,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$TEMPBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+  
+  plot(cpe~FLUOROBOTM,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$FLUOROBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+  
+  plot(cpe~TURBBOTM,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$TURBBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+  
+  plot(cpe~OXYBOTM,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$OXYBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+  
+  plot(cpe~dombot8,
+       data = sp.df[[i]],
+       xlab="", las=2)
+  
+  plot(cpe~Dis.to.SHORE,
+       data = sp.df[[i]],
+       las=2)
+    mtext(paste0("r = ",
+               cor(sp.df[[i]]$Dis.to.SHORE, sp.df[[i]]$cpe, use = "complete.obs")),
+        side=3,line=0)
+
+  plot(cpe~STARTLAT,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$STARTLAT, sp.df[[i]]$cpe)),
+        side=3,line=0)
+  
+  plot(cpe~STARTLON,
+       data = sp.df[[i]])
+  mtext(paste0("r = ",
+               cor(sp.df[[i]]$STARTLON, sp.df[[i]]$cpe)),
+        side=3,line=0)
+  
+  mtext(names(sp.df[i]), side=3, line=0.65, outer=TRUE, cex=2, 
+        font=2)
+  
+  par(oldpar)
+}
+```
+
+
