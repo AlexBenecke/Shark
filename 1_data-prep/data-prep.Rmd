@@ -25,6 +25,9 @@ require(dplyr)
 require(magrittr)
 require(scales)
 
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" # Specify project where data is stored 
+output_data_prep <- path_get(proj, "output/output_data_prep")
 
 source("5_functions/taxa-function.R")
 ```
@@ -37,13 +40,12 @@ source("5_functions/taxa-function.R")
 ## Creating New Variables ##
 
 ```{r Load CPUE data}
-eff <- read.csv("data/raw-data/CPUE.csv", na.strings = "") %>%
+eff <- read_csv_fn(proj, "data/raw-data/CPUE.csv", na.strings = "") %>%
   arrange(YEAR,GOM_AREA,END_GMT)
 
 str(eff)
 headtail(eff)
 ```
-
 
 
 ### AVG.DEPTH
@@ -103,9 +105,9 @@ wgs.84    <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 mollweide <- "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 sp.points <- SpatialPoints(eff[,c("Long","Lat")], proj4string=CRS(wgs.84))
 
-path <- "data/shape-file/ne_10m_coastline/ne_10m_coastline.shp"
+path <- "shape-file/ne_10m_coastline/ne_10m_coastline.shp"
 
-coast  <- rgdal::readOGR(dsn=path,layer="ne_10m_coastline",p4s=wgs.84)
+coast  <- rgdal::readOGR(dsn = path,layer="ne_10m_coastline",p4s=wgs.84)
 
 coast.moll <- spTransform(coast,CRS(mollweide))
 
@@ -132,7 +134,7 @@ str(eff)
 
 ```{r Plot points and shoreline, echo = FALSE}
 
-gulf.shape <- "data/shape-file/Shape/stateshigh.shp"
+gulf.shape <- "shape-file/Shape/stateshigh.shp"
 gulf.shape <- maptools::readShapePoly(gulf.shape)
 
 plot(eff$Long, eff$Lat,
@@ -147,11 +149,60 @@ sp::plot(gulf.shape, add= T,
 ```
 
 
+### Create Presence Abscence Variable
+
+This has been put inside the extract taxa finction (`taxa-fn.R`).
+
+```{r Create pres variable, eval=FALSE}
+extract_taxa_fn <- function(data.in = x,
+                                tax.id = y) {
+  
+  red.df <- data.in %>%
+    select(YEAR, MONTH, STARTLAT, STARTLON, START_GMT, ENDLAT, ENDLON, 
+           STARTDEPTH, ENDDEPTH, AVG.DEPTH, TEMPBOTM, FLUOROBOTM, TURBBOTM, 
+           OXYBOTM, SALBOTM, dombot8, dombot4, Dis.to.SHORE)
+  
+  red.df <- cbind(red.df, cpe = tax.id) 
+  
+  pos.ind <- which(red.df$cpe >= 0)   ### be sure no negatives
+  red.df <- red.df[pos.ind,]
+  
+  ### Create presence absence variable
+  
+  red.df$pres <- numeric(nrow(red.df))
+  
+  for(i in 1:nrow(red.df)){
+    
+    if(red.df$cpe[i] > 0){
+      
+      red.df$pres[i] <- 1
+      
+    } else if(red.df$cpe[i] == 0){
+      
+      red.df$pres[i] <- 0
+      
+    } else{
+      
+      red.df$pres[i] <- "NA"
+      
+    }
+  }
+  
+  
+  red.df %<>% select(cpe, pres, DATE = START_GMT, YEAR, MONTH, STARTLAT:STARTLON, ENDLAT:ENDLON, 
+                     STARTDEPTH, ENDDEPTH, AVG.DEPTH, TEMPBOTM:dombot4, Dis.to.SHORE)
+  
+  
+  return(reduced.df = red.df)
+}
+```
+
+
 ### Saving changes to CPUE2.csv 
 
-```{r}
+```{r Create CPUE2.csv, }
 
-#7-31-18#write.csv(eff,file = "data/raw-data/CPUE2.csv", row.names = FALSE)
+#8-1-18#write_csv_fn(proj, eff, file = "data/raw-data/CPUE2.csv", row.names = FALSE)
 
 ```
 
@@ -164,36 +215,36 @@ sp::plot(gulf.shape, add= T,
 ```{r Load Data}
 source("5_functions/taxa-function.R")
 
-eff2 <- read.csv("data/raw-data/CPUE2.csv")
+eff2 <- read_csv_fn(proj, "data/raw-data/CPUE2.csv") 
 
 str(eff2)
 
-sp.df <- list(blacknose.df = acronotus.df <- extract.taxa.df.fun(eff2,
-                             eff2$CARCHARHINUS.ACRONOTUS),
+sp.df <- list(blacknose =  extract_taxa_fn(eff2,
+                                   eff2$CARCHARHINUS.ACRONOTUS),
               
-              blacktip.df = extract.taxa.df.fun(eff2,
+              blacktip = extract_taxa_fn(eff2,
                                      eff2$CARCHARHINUS.LIMBATUS),
               
-              bull.df = extract.taxa.df.fun(eff2,
+              bull = extract_taxa_fn(eff2,
                                      eff2$CARCHARHINUS.LEUCAS),
               
-              sandbar.df = extract.taxa.df.fun(eff2,
+              sandbar = extract_taxa_fn(eff2,
                                      eff2$CARCHARHINUS.PLUMBEUS),
               
-              sharpnose.df = extract.taxa.df.fun(eff2,
+              sharpnose = extract_taxa_fn(eff2,
                                      eff2$RHIZOPRIONODON.TERRAENOVAE),
               
-              silky.df = extract.taxa.df.fun(eff2,
+              silky = extract_taxa_fn(eff2,
                                      eff2$CARCHARHINUS.FALCIFORMIS),
               
-              spinner.df = extract.taxa.df.fun(eff2,
+              spinner = extract_taxa_fn(eff2,
                                     eff2$CARCHARHINUS.BREVIPINNA),
               
-              tiger.df = extract.taxa.df.fun(eff2,
+              tiger = extract_taxa_fn(eff2,
                                      eff2$GALEOCERDO.CUVIER))
 
-str(sp.df$sharpnose.df)
-head(sp.df$sharpnose.df)
+str(sp.df$sharpnose)
+head(sp.df$sharpnose)
 ```
 
 2. Plot CPUE for all Species vs all Explanatory variables
@@ -357,86 +408,86 @@ str(eff2)
 (sp.list <- colnames(eff2[,c(43:50)]))
 
 ##  which(names(eff) %in%  (sp.list <- colnames(eff[,c(43:50)])) )
+```
 
 
 
 
-
-
+```{r Extract CPUE for each species and create .csv, eval = FALSE}
 ### CARCHARHINUS.ACRONOTUS
 
-acronotus <- extract.taxa.df.fun(eff2,
-                             eff2$CARCHARHINUS.ACRONOTUS) #%>%
-#  write.csv(file = "data/clean-data/acronotus.csv", row.names = FALSE)
+blacknose <- extract_taxa_fn(eff2,
+                             eff2$CARCHARHINUS.ACRONOTUS) %>%
+#  write_csv_fn(proj, file = "data/clean-data/blacknose.csv", row.names = FALSE)
 
 
 ### CARCHARHINUS.BREVIPINNA
 
-brevipinna <- extract.taxa.df.fun(eff2,
-                                    eff2$CARCHARHINUS.BREVIPINNA) #%>%
-#  write.csv(file = "data/clean-data/brevipinna.csv", row.names = FALSE)
+spinner <- extract_taxa_fn(eff2,
+                                    eff2$CARCHARHINUS.BREVIPINNA) %>%
+#  write_csv_fn(proj, file = "data/clean-data/spinner.csv", row.names = FALSE)
 
 
 
 ### CARCHARHINUS.FALCIFORMIS
 
-falciformis <- extract.taxa.df.fun(eff2,
-                                     eff2$CARCHARHINUS.FALCIFORMIS) #%>%
-#  write.csv(file = "data/clean-data/falciformis.csv", row.names = FALSE)
+silky <- extract_taxa_fn(eff2,
+                                     eff2$CARCHARHINUS.FALCIFORMIS) %>%
+#  write_csv_fn(proj, file = "data/clean-data/silky.csv", row.names = FALSE)
 
 
 
 ### CARCHARHINUS.LEUCAS
 
-leucas <- extract.taxa.df.fun(eff2,
-                                     eff2$CARCHARHINUS.LEUCAS) #%>%
-#  write.csv(file = "data/clean-data/leucas.csv", row.names = FALSE)
+bull <- extract_taxa_fn(eff2,
+                                     eff2$CARCHARHINUS.LEUCAS) %>%
+#  write_csv_fn(proj, file = "data/clean-data/bull.csv", row.names = FALSE)
 
 
 
 ### CARCHARHINUS.LIMBATUS
 
-limbatus <- extract.taxa.df.fun(eff2,
-                                     eff2$CARCHARHINUS.LIMBATUS)# %>%
-#  write.csv(file = "data/clean-data/limbatus.csv", row.names = FALSE)
+blacktip <- extract_taxa_fn(eff2,
+                                     eff2$CARCHARHINUS.LIMBATUS) %>%
+#  write_csv_fn(proj, file = "data/clean-data/blacktip.csv", row.names = FALSE)
 
 
 
 ### CARCHARHINUS.PLUMBEUS
 
-plumbeus <- extract.taxa.df.fun(eff2,
+sandbar <- extract_taxa_fn(eff2,
                                      eff2$CARCHARHINUS.PLUMBEUS) %>%
-#  write.csv(file = "data/clean-data/plumbeus.csv", row.names = FALSE)
+#  write_csv_fn(proj, file = "data/clean-data/sandbar.csv", row.names = FALSE)
 
 
 
 ### GALEOCERDO.CUVIER
 
-cuvier <- extract.taxa.df.fun(eff2,
+tiger <- extract_taxa_fn(eff2,
                                      eff2$GALEOCERDO.CUVIER) %>%
-#  write.csv(file = "data/clean-data/cuvier.csv", row.names = FALSE)
+#  write_csv_fn(proj, file = "data/clean-data/tiger.csv", row.names = FALSE)
 
 
 
 ### RHIZOPRIONODON.TERRAENOVAE
 
-terraenovae <- extract.taxa.df.fun(eff2,
+sharpnose <- extract_taxa_fn(eff2,
                                      eff2$RHIZOPRIONODON.TERRAENOVAE) %>%
-#  write.csv(file = "data/clean-data/terraenovae.csv", row.names = FALSE)
+#  write_csv_fn(proj, file = "data/clean-data/sharpnose.csv", row.names = FALSE)
 
 ```
 
 5. Load newly created .csv files and save to sp.df list
 
 ```{r}
-sp.df <- list(blacknose = read.csv("data/clean-data/acronotus.csv"),
-              blacktip = read.csv("data/clean-data/limbatus.csv"),
-              bull = read.csv("data/clean-data/leucas.csv"),
-              sandbar = read.csv("data/clean-data/plumbeus.csv"),
-              sharpnose = read.csv("data/clean-data/terraenovae.csv"),
-              silky = read.csv("data/clean-data/falciformis.csv"),
-              spinner = read.csv("data/clean-data/brevipinna.csv"),
-              tiger = read.csv("data/clean-data/cuvier.csv"))
+sp.df <- list(blacknose = read_csv_fn(proj, "data/clean-data/blacknose.csv"),
+              blacktip = read_csv_fn(proj, "data/clean-data/blacktip.csv"),
+              bull = read_csv_fn(proj, "data/clean-data/bull.csv"),
+              sandbar = read_csv_fn(proj, "data/clean-data/sandbar.csv"),
+              sharpnose = read_csv_fn(proj, "data/clean-data/sharpnose.csv"),
+              silky = read_csv_fn(proj, "data/clean-data/silky.csv"),
+              spinner = read_csv_fn(proj, "data/clean-data/spinner.csv"),
+              tiger = read_csv_fn(proj, "data/clean-data/tiger.csv"))
 ```
 
 6. make new cpue plots and make sure outliers are gone.
