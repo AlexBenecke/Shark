@@ -1,0 +1,267 @@
+---
+title: "Best GAM"
+author: "Alex Benecke"
+date: "July 30, 2018"
+output:   
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 5
+    fig_width: 10
+    fig_height: 10
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load Packages, include=FALSE}
+
+### Load Packages
+library(FSA)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(scales)
+library(mgcv)
+library(sciplot)
+
+### Load My Functions
+source("functions/my_summary.R")
+source("functions/k_est_fn.R")
+source("functions/fit_gam.R")
+source("functions/taxa-function.R")
+source("functions/scatter_fn.R")
+source("functions/hist_fn.R")
+```
+
+
+```{r Load Data, echo=FALSE, include=FALSE}
+eff2 <- read.csv("data/CPUE2.csv")
+
+
+blacknose <- read.csv("data/acronotus.df.csv") 
+blacknose$MONTH <- factor(strftime(blacknose$DATE, format = "%b"))
+blacknose$YEAR <- factor(blacknose$YEAR)
+tmp.bn <- blacknose[blacknose$cpe>0,]
+      
+str(blacknose)
+
+
+blacktip <- read.csv("data/limbatus.df.csv")
+blacktip$MONTH  <- factor(strftime(blacktip$DATE, format = "%b"))
+blacktip$YEAR <- factor(blacktip$YEAR)
+tmp.bt <- blacktip[blacktip$cpe>0,]
+
+str(blacktip)
+
+bull <- read.csv("data/leucas.df.csv")
+bull$MONTH  <- factor(strftime(bull$DATE, format = "%b"))
+bull$YEAR <- factor(bull$YEAR)
+tmp.bu <- bull[bull$cpe>0,]
+
+str(bull)
+
+sandbar <- read.csv("data/plumbeus.df.csv")
+sandbar$MONTH  <- factor(strftime(sandbar$DATE, format = "%b"))
+sandbar$YEAR <- factor(sandbar$YEAR)
+tmp.sb <- sandbar[sandbar$cpe>0,]
+
+str(sandbar)
+
+sharpnose <- read.csv("data/terraenovae.df.csv")
+sharpnose$MONTH  <- factor(strftime(sharpnose$DATE, format = "%b"))
+sharpnose$YEAR <- factor(sharpnose$YEAR)
+tmp.sn <- sharpnose[sharpnose$cpe>0,]
+
+str(sharpnose)
+
+silky <- read.csv("data/falciformis.df.csv")
+silky$MONTH  <- factor(strftime(silky$DATE, format = "%b"))
+silky$YEAR <- factor(silky$YEAR)
+tmp.si <- silky[silky$cpe>0,]
+
+str(silky)
+
+spinner <- read.csv("data/brevipinna.df.csv")
+spinner$MONTH <- factor(strftime(spinner$DATE, format = "%b"))
+spinner$YEAR <- factor(spinner$YEAR)
+tmp.sp <- spinner[spinner$cpe>0,]
+
+str(spinner)
+
+tiger <- read.csv("data/cuvier.df.csv")
+tiger$MONTH  <- factor(strftime(tiger$DATE, format = "%b"))
+tiger$YEAR <- factor(tiger$YEAR)
+tmp.ti <- tiger[tiger$cpe>0,]
+
+str(tiger)
+
+
+sp.df <- list(blacknose = blacknose,
+              blacktip = blacktip,
+              bull = bull,
+              sandbar = sandbar,
+              sharpnose = sharpnose,
+              silky = silky,
+              spinner = spinner,
+              tiger = tiger)
+```
+
+
+```{r Load Model Output}
+#load(file = "model-output/bn_gam_select_1.rda")
+#load(file = "model-output/bt_gam_select_1.rda")
+#load(file = "model-output/bu_gam_select_1.rda") 
+#load(file = "model-output/sb_gam_select_1.rda")
+#load(file = "model-output/sn_gam_select_1.rda")
+#load(file = "model-output/sn_gam_select_1.rda")
+#load(file = "model-output/si_gam_select_1.rda")
+#load(file = "model-output/sp_gam_select_1.rda")
+#load(file = "model-output/ti_gam_select_1.rda")
+
+load(file = "model-output/bn_gam_strtat_2.rda")
+load(file = "model-output/bt_gam_strtat_2.rda")
+load(file = "model-output/bu_gam_strtat_2.rda") 
+load(file = "model-output/sb_gam_strtat_2.rda")
+load(file = "model-output/sn_gam_strtat_2.rda")
+load(file = "model-output/sn_gam_strtat_2.rda")
+load(file = "model-output/si_gam_strtat_2.rda")
+load(file = "model-output/sp_gam_strtat_2.rda")
+load(file = "model-output/ti_gam_strtat_2.rda")
+
+```
+
+
+# Strata 1 Presence and Absence
+
+
+## Blacknose (*Carcharhinus acronotus*)
+
+
+## Blacktip (*C. limbatus*)
+
+
+## Bull (*C. leucas*)
+
+
+## Sandbar (*C. plumbeus*)
+
+
+## Sharpnose (*Rhizoprionodon terraenovae*)
+
+
+## Silky (*C. falciformis*)
+
+
+## Spinner (*C. brevipinna*)
+
+
+## Tiger (*Galeocerdo cuvier*)
+
+
+
+
+# Strata 2 CPUE (Positive Catch) #
+
+
+## Blacknose (*Carcharhinus acronotus*)
+
+
+## Blacktip (*C. limbatus*)
+
+
+## Bull (*C. leucas*)
+
+
+## Sandbar (*C. plumbeus*)
+
+
+## Sharpnose (*Rhizoprionodon terraenovae*)
+```{r Sharpnose Model Results}
+sn_gam_strata_2$results
+
+
+```
+
+```{r}
+(sn_best_alt <- sn_gam_strata_2$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Yr)
+
+par(mfrow = c(2,2))
+gam.check(sn_best_alt)
+
+summary(sn_best_alt)
+
+par(mfrow = c(3,2))
+
+for(i in 2:length(sn_best_alt$sp)){
+  plot(sn_best_alt, select = i)
+  abline(h=0, col="blue", lty = 3)
+}
+```
+
+
+```{r poential best model for sharpnose}
+(sn_best <- sn_gam_strata_2$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal_Yr)
+
+par(mfrow = c(2,2))
+gam.check(sn_best)
+
+summary(sn_best)
+
+par(mfrow = c(3,2))
+
+for(i in 2:length(sn_best$sp)){
+  plot(sn_best, select = i)
+  abline(h=0, col="blue", lty = 3)
+}
+```
+
+Right away I can see that the p-values for  **OXYBOTM** and **SALBOTM** are not significant. This by itself maynot mean that I should remove the variable, however, I can see that the *edf* for **OXYBOTM** is 1 suggesting that their is either a linear relationship between **OXYBOTM** and **CPUE** or that **OXYBOTM** is not a good explanatory variable for **CPUE**. By looking at the plots for the smooths I can see right away that **OXYBOTM** is zero along it's entire range so I will look for a model without this term. The same appears to be true for **SALBOTM**.
+
+
+```{r}
+(sn_best_2 <- sn_gam_strata_2$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Yr)
+
+par(mfrow = c(2,2))
+gam.check(sn_best_2)
+
+summary(sn_best_2)
+
+par(mfrow = c(2,2))
+
+for(i in 2:length(sn_best_2$sp)){
+  plot(sn_best_2, select = i)
+  abline(h=0, col="blue", lty = 3)
+}
+
+```
+
+```{r}
+AIC(sn_best, sn_best_alt, sn_best_2)
+```
+
+
+
+## Silky (*C. falciformis*)
+
+
+## Spinner (*C. brevipinna*)
+
+
+## Tiger (*Galeocerdo cuvier*)
+
+
+
+
+
+
+
+
+
+
+
+
