@@ -15,10 +15,10 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 ```
 
-```{r Load Packages, include=FALSE}
+```{r Load Packages, include=FALSE, eval=TRUE}
 
 ### Load Packages
 library(FSA)
@@ -30,238 +30,1519 @@ library(mgcv)
 library(sciplot)
 
 ### Load My Functions
-source("functions/my_summary.R")
-source("functions/k_est_fn.R")
-source("functions/fit_gam.R")
-source("functions/taxa-function.R")
-source("functions/scatter_fn.R")
-source("functions/hist_fn.R")
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" # Specify project where data is stored 
+
+source("5_functions/load_data.R")
+```
+
+```{r Load Data, echo=FALSE, include=FALSE, eval=FALSE}
+#### Load Combined Data ####
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj , na.strings = c(NA, ""))
+str(eff3)
+
+#### Load Structured Data ####
+  ## Strata 1
+strat1_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 1)
+strat1_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 1)
+  ## Strata 2
+strat2_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 2)
+strat2_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 2)
 ```
 
 
-```{r Load Data, echo=FALSE, include=FALSE}
-eff2 <- read.csv("data/CPUE2.csv")
+# Models Fit #
+
+## Strata 1
+
+| Species   | Female Adult | Female Juvenile | Male Adult | Male Juvenile |
+|:---------:|:------------:|:---------------:|:----------:|:-------------:|
+| Blacknose |  OK          |  OK             |  OK        |  OK           |
+| Blacktip  |  OK          |  OK             |  OK        |  OK           |
+| Bull      |  OK          |  OK             |  OK        |  OK           |
+| Sandbar   |  OK          |  OK             |  OK        |  OK           |
+| Sharpnose |  OK          |  OK             |  OK        |  OK           |
+| Spinner   |  OK          |  OK             |  OK        |  OK           |
+| Tiger     |  OK          |  OK             |  OK        |  OK           |
+
+## Strata 2
+
+| Species   | Female Adult | Female Juvenile | Male Adult | Male Juvenile |
+|:---------:|:------------:|:---------------:|:----------:|:-------------:|
+| Blacknose |  OK          |  OK             |  OK        |  OK           |
+| Blacktip  |  OK          |  OK             |  OK        |  OK           |
+| Bull      |  Failed      |  Failed         |  Failed    |  Failed       |
+| Sandbar   |  OK          |  OK             |  Failed    |  OK           |
+| Sharpnose |  OK          |  OK             |  OK        |  OK           |
+| Spinner   |  Failed      |  OK             |  Failed    |  OK           |
+| Tiger     |  Failed      |  OK             |  Failed    |  OK           |
 
 
-blacknose <- read.csv("data/acronotus.df.csv") 
-blacknose$MONTH <- factor(strftime(blacknose$DATE, format = "%b"))
-blacknose$YEAR <- factor(blacknose$YEAR)
-tmp.bn <- blacknose[blacknose$cpe>0,]
-      
-str(blacknose)
+The **Primary Species** I will Use are going to be **Blacknose**, **Blacktip**, and **Sharpnose** because they were fit for all levels of sex and maturity in both strata
 
 
-blacktip <- read.csv("data/limbatus.df.csv")
-blacktip$MONTH  <- factor(strftime(blacktip$DATE, format = "%b"))
-blacktip$YEAR <- factor(blacktip$YEAR)
-tmp.bt <- blacktip[blacktip$cpe>0,]
+# Strata 1 #
+## Female ##
 
-str(blacktip)
+### Adult ###
+```{r Load S1_FA, eval=FALSE}
+#### Strata 1 ####
+  ## Female Adult
+filenames_s1_FA <- list.files("output/output_GAM/strat1/Female_Adult", pattern="*.rda", full.names=TRUE)
 
-bull <- read.csv("data/leucas.df.csv")
-bull$MONTH  <- factor(strftime(bull$DATE, format = "%b"))
-bull$YEAR <- factor(bull$YEAR)
-tmp.bu <- bull[bull$cpe>0,]
+for( i in 1:length( filenames_s1_FA ) ){ load( file = filenames_s1_FA[ i ] ) }
 
-str(bull)
-
-sandbar <- read.csv("data/plumbeus.df.csv")
-sandbar$MONTH  <- factor(strftime(sandbar$DATE, format = "%b"))
-sandbar$YEAR <- factor(sandbar$YEAR)
-tmp.sb <- sandbar[sandbar$cpe>0,]
-
-str(sandbar)
-
-sharpnose <- read.csv("data/terraenovae.df.csv")
-sharpnose$MONTH  <- factor(strftime(sharpnose$DATE, format = "%b"))
-sharpnose$YEAR <- factor(sharpnose$YEAR)
-tmp.sn <- sharpnose[sharpnose$cpe>0,]
-
-str(sharpnose)
-
-silky <- read.csv("data/falciformis.df.csv")
-silky$MONTH  <- factor(strftime(silky$DATE, format = "%b"))
-silky$YEAR <- factor(silky$YEAR)
-tmp.si <- silky[silky$cpe>0,]
-
-str(silky)
-
-spinner <- read.csv("data/brevipinna.df.csv")
-spinner$MONTH <- factor(strftime(spinner$DATE, format = "%b"))
-spinner$YEAR <- factor(spinner$YEAR)
-tmp.sp <- spinner[spinner$cpe>0,]
-
-str(spinner)
-
-tiger <- read.csv("data/cuvier.df.csv")
-tiger$MONTH  <- factor(strftime(tiger$DATE, format = "%b"))
-tiger$YEAR <- factor(tiger$YEAR)
-tmp.ti <- tiger[tiger$cpe>0,]
-
-str(tiger)
-
-
-sp.df <- list(blacknose = blacknose,
-              blacktip = blacktip,
-              bull = bull,
-              sandbar = sandbar,
-              sharpnose = sharpnose,
-              silky = silky,
-              spinner = spinner,
-              tiger = tiger)
+rm( filenames_s1_FA )
+```
+```{r, echo=FALSE, eval=TRUE}
+load("output/output_GAM/strat1/Female_Adult/bn_s1_FA.rda")
+load("output/output_GAM/strat1/Female_Adult/bt_s1_FA.rda")
+load("output/output_GAM/strat1/Female_Adult/sn_s1_FA.rda")
 ```
 
 
-```{r Load Model Output}
-#load(file = "model-output/bn_gam_select_1.rda")
-#load(file = "model-output/bt_gam_select_1.rda")
-#load(file = "model-output/bu_gam_select_1.rda") 
-#load(file = "model-output/sb_gam_select_1.rda")
-#load(file = "model-output/sn_gam_select_1.rda")
-#load(file = "model-output/sn_gam_select_1.rda")
-#load(file = "model-output/si_gam_select_1.rda")
-#load(file = "model-output/sp_gam_select_1.rda")
-#load(file = "model-output/ti_gam_select_1.rda")
+#### Blacknose
+```{r, eval=TRUE}
+bn_s1_FA$results ### top 3 dAIC < 4
 
-load(file = "model-output/bn_gam_strtat_2.rda")
-load(file = "model-output/bt_gam_strtat_2.rda")
-load(file = "model-output/bu_gam_strtat_2.rda") 
-load(file = "model-output/sb_gam_strtat_2.rda")
-load(file = "model-output/sn_gam_strtat_2.rda")
-load(file = "model-output/sn_gam_strtat_2.rda")
-load(file = "model-output/si_gam_strtat_2.rda")
-load(file = "model-output/sp_gam_strtat_2.rda")
-load(file = "model-output/ti_gam_strtat_2.rda")
+bn.top_s1_FA <- bn_s1_FA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal
 
+summary(bn.top_s1_FA)
 ```
 
+  **turbbotm** not significant and edf = 1.
+  **salbotm** p-value suggests significance but edf is approximatly equal to 1.
 
-# Strata 1 Presence and Absence
-
-
-## Blacknose (*Carcharhinus acronotus*)
-
-
-## Blacktip (*C. limbatus*)
-
-
-## Bull (*C. leucas*)
-
-
-## Sandbar (*C. plumbeus*)
-
-
-## Sharpnose (*Rhizoprionodon terraenovae*)
-
-
-## Silky (*C. falciformis*)
-
-
-## Spinner (*C. brevipinna*)
-
-
-## Tiger (*Galeocerdo cuvier*)
-
-
-
-
-# Strata 2 CPUE (Positive Catch) #
-
-
-## Blacknose (*Carcharhinus acronotus*)
-
-
-## Blacktip (*C. limbatus*)
-
-
-## Bull (*C. leucas*)
-
-
-## Sandbar (*C. plumbeus*)
-
-
-## Sharpnose (*Rhizoprionodon terraenovae*)
-```{r Sharpnose Model Results}
-sn_gam_strata_2$results
-
-
-```
-
-```{r}
-(sn_best_alt <- sn_gam_strata_2$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Yr)
-
+```{r, eval=TRUE}
 par(mfrow = c(2,2))
-gam.check(sn_best_alt)
+gam.check(bn.top_s1_FA)
+```
 
-summary(sn_best_alt)
-
+  Plot of Residuals against linear predictor looks strange to me. The histogram of the residuals has a gap in it.
+  
+  k` looks good for all variables.
+  
+```{r, eval=TRUE}
 par(mfrow = c(3,2))
+#par(mfrow = c(1,1))
 
-for(i in 2:length(sn_best_alt$sp)){
-  plot(sn_best_alt, select = i)
-  abline(h=0, col="blue", lty = 3)
+for(i in 2:7){
+  
+  plot(bn.top_s1_FA,
+       select = i)
+  abline(h = 0, col = "red", lty = 2)
+  
 }
 ```
+**root startdepth**, **turbbotm**,  are zero throughout their entire range
 
+**tempbotm**, **oxybotm** maybe zero throughout it's entire range.
 
-```{r poential best model for sharpnose}
-(sn_best <- sn_gam_strata_2$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal_Yr)
+**salbotm** looks linear and increasing very slightly.
+
+  I want to look at another model without the **turbbotm** smooth.
+```{r, eval=TRUE}
+bn.2_s1_FA <- bn_s1_FA$model_fits$Lat_Lon_Root_Dep_Temp_Oxy_Sal
+
+summary(bn.2_s1_FA)
+```
+  **salbotm** edf is still near 1 but i think this is ok.
+  
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+gam.check(bn.2_s1_FA)
+```
+
+  k` looks good for all variables
+```{r, eval=TRUE}
 
 par(mfrow = c(2,2))
-gam.check(sn_best)
+#par(mfrow = c(1,1))
 
-summary(sn_best)
-
-par(mfrow = c(3,2))
-
-for(i in 2:length(sn_best$sp)){
-  plot(sn_best, select = i)
-  abline(h=0, col="blue", lty = 3)
+for(i in 2:5){
+  
+  plot(bn.2_s1_FA,
+       select = i)
+  abline(h = 0, col = "red", lty = 2)
+  
 }
+
+par(mfrow = c(1,1))
+  plot(bn.2_s1_FA,
+       select = 6)
+```
+**root startdepth** is zero throughout it's entire range but is close near 2.5 and 3.5. 
+**tempbotm**  zero throughouts it's entire range but it is very hard to tell near 18-19 or 27.
+**Oxybotm** Zero below 8 Positive 8-10, and zero above 10 (but wide CI).
+**salbotm** again appears linear and negative to left increasing to right (negative below approx. 32 and Pos above approx. 37.5 Zero between).
+
+
+For good measure I want to look at the 2nd ranged model
+```{r, eval=TRUE}
+bn.top2_s1_FA <- bn_s1_FA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Sal_Dis
+
+summary(bn.top2_s1_FA)
 ```
 
-Right away I can see that the p-values for  **OXYBOTM** and **SALBOTM** are not significant. This by itself maynot mean that I should remove the variable, however, I can see that the *edf* for **OXYBOTM** is 1 suggesting that their is either a linear relationship between **OXYBOTM** and **CPUE** or that **OXYBOTM** is not a good explanatory variable for **CPUE**. By looking at the plots for the smooths I can see right away that **OXYBOTM** is zero along it's entire range so I will look for a model without this term. The same appears to be true for **SALBOTM**.
+edf of both **turbbotm** and **salbotm** is 1 and p-value is not significant.
 
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+gam.check(bn.top2_s1_FA)
+```
+
+```{r, eval=TRUE}
+par(mfrow = c(2,3))
+#par(mfrow = c(1,1))
+
+for(i in 2:6){
+  
+  plot(bn.top2_s1_FA,
+       select = i)
+  abline(h = 0, col = "red", lty = 2)
+  
+}
+
+par(mfrow = c(1,1))
+
+plot(bn.top2_s1_FA,
+       select = 2)
+abline(h = 0, col = "red", lty = 2)
+
+plot(bn.top2_s1_FA,
+       select = 3,
+     ylim = c(-10,10))
+abline(h = 0, col = "red", lty = 2)
+
+plot(bn.top2_s1_FA,
+       select = 4,
+     ylim = c(-2,2))
+abline(h = 0, col = "red", lty = 2)
+
+plot(bn.top2_s1_FA,
+       select = 5,
+     ylim = c(-5,5))
+abline(h = 0, col = "red", lty = 2)
+
+plot(bn.top2_s1_FA,
+       select = 6,
+     ylim = c(-5,5))
+abline(h = 0, col = "red", lty = 2)
+
+plot(bn.top2_s1_FA,
+       select = 7)
+abline(h = 0, col = "red", lty = 2)
+
+```
+**root startdepth** is zero thoroughout it's entire range.
+
+**tempbotm** is positive approx. between 24 and 26 zero everywhere else.
+
+**turbbotm** is zero everywhere
+
+**salbotm** is zero everywhere
+
+**Dis.to.SHORE** is zero everywhere
+
+
+
+
+
+```{r, eval=TRUE}
+bn.top3_s1_FA <- bn_s1_FA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy
+
+summary(bn.top3_s1_FA)
+gam.check(bn.top3_s1_FA)
+plot(bn.top3_s1_FA,pages = 1)
+
+bn.top19_s1_FA <- bn_s1_FA$model_fits$Lat_Lon_Root_Dep_Temp_Oxy_Sal_Dis
+
+summary(bn.top19_s1_FA)
+gam.check(bn.top19_s1_FA)
+#par(mfrow = c(1,1))
+plot(bn.top19_s1_FA,pages = 1)
+
+plot(bn.top19_s1_FA,
+     select = 6)
+abline(h = 0, col = "red", lty = 2)
+```
+
+  I think the best model to use is the one with the same structure as the top model but without the **turbbotm** smooth.
 
 ```{r}
-(sn_best_2 <- sn_gam_strata_2$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Yr)
+bn_s1_FA_best <- bn_s1_FA$model_fits$Lat_Lon_Root_Dep_Temp_Oxy_Sal
 
+#-saves_8/22/18-#save(bn_s1_FA_best, file = "output/output_GAM/best_strat1/Female_Adult/bn_s1_FA_best.rda")
+
+```
+
+
+
+#### Blacktip
+```{r, eval=TRUE}
+bt_s1_FA$results[c(1:20), c(1:4,7)]
+
+bt.top_s1_FA <- bt_s1_FA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal_Dis
+
+summary(bt.top_s1_FA)
+```
+
+```{r, eval=TRUE}
 par(mfrow = c(2,2))
-gam.check(sn_best_2)
+gam.check(bt.top_s1_FA)
+```
 
-summary(sn_best_2)
+**depth**, **Turb**, **Sal** edf all = 1.
 
-par(mfrow = c(2,2))
+```{r, eval=TRUE}
+plot(bt.top_s1_FA,
+     pages = 1)
 
-for(i in 2:length(sn_best_2$sp)){
-  plot(sn_best_2, select = i)
-  abline(h=0, col="blue", lty = 3)
+
+par(mfrow = c(2,3))
+
+for(i in 2:7){
+  
+  plot(bt.top_s1_FA,
+     select = i)
+  abline(h = 0, col = "red", lty = 3)
+  
 }
 
 ```
+**startdepth** is zero
+
+**turbbotm** looks linear decreasing to zero near 75ish, negative past 80.
+
+**Salbotm** is zero but if CI were closer would be linear increasing.
+
+** Dis.to.SHORE** is zero
+
+```{r, eval=TRUE}
+
+bt.2_s1_FA <- bt_s1_FA$model_fits$Lat_Lon_Temp_Turb_Oxy
+
+summary(bt.2_s1_FA)
+
+par(mfrow = c(2,2))
+gam.check(bt.2_s1_FA)
+
+
+par(mfrow = c(2,2))
+
+for(i in 2:5){
+  
+  plot(bt.2_s1_FA,
+     select = i)
+  abline(h = 0, col = "red", lty = 3)
+  
+}
+```
+
+```{r, eval=TRUE}
+anova.gam(bt.top_s1_FA, bt.2_s1_FA, test = "Chisq") ## No difference
+
+AIC(bt.top_s1_FA, bt.2_s1_FA)
+```
 
 ```{r}
-AIC(sn_best, sn_best_alt, sn_best_2)
+bt_s1_FA_best <- bt_s1_FA$model_fits$Lat_Lon_Temp_Turb_Oxy
+
+#-saves_8/23/18-#save(bt_s1_FA_best, file = "output/output_GAM/best_strat1/Female_Adult/bt_s1_FA_best.rda")
+
+```
+
+
+#### Bull
+```{r}
+bu_s1_FA$results[c(1:20), c(1:4,7)]
+
+bu.top_s1_FA <- bu_s1_FA$model_fits$Lat_Lon_Root_Dep_Dis
+
+summary(bu.top_s1_FA)
+```
+
+
+#### Sandbar
+```{r}
+sb_s1_FA$results[c(1:20), c(1:4,7)]
+
+sb.top_s1_FA <- sb_s1_FA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Sal_Dis
+
+summary(sb.top_s1_FA)
+```
+
+
+#### Sharpnose
+```{r, eval=TRUE}
+sn_s1_FA$results[c(1:20), c(1:4,7)]
+
+sn.top_s1_FA <- sn_s1_FA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Dis
+
+summary(sn.top_s1_FA)
+```
+**oxybotm** edf = 1
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(sn.top_s1_FA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,3))
+par(mfrow = c(1,1))
+
+for(i in 2:7 ){
+  
+  plot( sn.top_s1_FA,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+#### Spinner
+```{r}
+sp_s1_FA$results[c(1:20), c(1:4,7)]
+
+sp.top_s1_FA <- sp_s1_FA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Dis
+
+summary(sp.top_s1_FA)
+```
+
+
+#### Tiger
+```{r}
+ti_s1_FA$results[c(1:20), c(1:4,7)] # top 8 dAIC < 4
+
+ti.top_s1_FA <- ti_s1_FA$model_fits$Lat_Lon
+
+summary(ti.top_s1_FA)
+```
+
+
+### Juvenile ###
+```{r Load S1_FJ, eval=FALSE}
+#### Strata 1 ####
+  ## Female Juvenile
+filenames_s1_FJ <- list.files("output/output_GAM/strat1/Female_Juvenile", pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_s1_FJ ) ){ load( file = filenames_s1_FJ[ i ] ) }
+
+rm( filenames_s1_FJ )
+```
+```{r, echo=FALSE, eval=TRUE}
+load("output/output_GAM/strat1/Female_Juvenile/bn_s1_FJ.rda")
+load("output/output_GAM/strat1/Female_Juvenile/bt_s1_FJ.rda")
+load("output/output_GAM/strat1/Female_Juvenile/sn_s1_FJ.rda")
+```
+
+#### Blacknose
+```{r, eval=TRUE}
+bn_s1_FJ$results[c(1:20), c(1:4,7)]
+
+bn.top_s1_FJ <- bn_s1_FJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal
+
+summary(bn.top_s1_FJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bn.top_s1_FJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:7 ){
+  
+  plot( bn.top_s1_FJ,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
 ```
 
 
 
-## Silky (*C. falciformis*)
+
+#### Blacktip
+```{r, eval=TRUE}
+bt_s1_FJ$results[c(1:20), c(1:4,7)]
+
+bt.top_s1_FJ <- bt_s1_FJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Dis
+
+summary(bt.top_s1_FJ)
+```
 
 
-## Spinner (*C. brevipinna*)
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bt.top_s1_FJ)
+```
 
 
-## Tiger (*Galeocerdo cuvier*)
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:7 ){
+  
+  plot( bt.top_s1_FJ,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Bull
+```{r}
+bu_s1_FJ$results[c(1:20), c(1:4,7)]
+
+bu.top_s1_FJ <- bu_s1_FJ$model_fits$Lat_Lon_Root_Dep_Turb
+
+summary(bu.top_s1_FJ)
+```
+
+
+#### Sandbar
+```{r}
+sb_s1_FJ$results[c(1:20), c(1:4,7)]
+
+sb.top_s1_FJ <- sb_s1_FJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb
+
+summary(sb.top_s1_FJ)
+```
+
+
+#### Sharpnose
+```{r, eval=TRUE}
+sn_s1_FJ$results[c(1:20), c(1:4,7)]
+
+sn.top_s1_FJ <- sn_s1_FJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy
+
+summary(sn.top_s1_FJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(sn.top_s1_FJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:6 ){
+  
+  plot( sn.top_s1_FJ,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Spinner
+```{r}
+sp_s1_FJ$results[c(1:20), c(1:4,7)]
+
+sp.top_s1_FJ <- sp_s1_FJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal_Dis
+
+summary(sp.top_s1_FJ)
+```
+
+
+#### Tiger
+```{r}
+ti_s1_FJ$results[c(1:20), c(1:4,7)]
+
+ti.top_s1_FJ <- ti_s1_FJ$model_fits$Lat_Lon_Root_Dep_Turb_Sal_Dis
+
+summary(ti.top_s1_FJ)
+```
+
+
+
+## Male ##
+### Adult ###
+```{r Load S1_MA, eval=FALSE}
+#### Strata 1 ####
+  ## Male Adult
+filenames_s1_MA <- list.files("output/output_GAM/strat1/Male_Adult", pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_s1_MA ) ){ load( file = filenames_s1_MA[ i ] ) }
+
+rm( filenames_s1_MA )
+```
+```{r, echo=FALSE, eval=TRUE}
+load("output/output_GAM/strat1/Male_Adult/bn_s1_MA.rda")
+load("output/output_GAM/strat1/Male_Adult/bt_s1_MA.rda")
+load("output/output_GAM/strat1/Male_Adult/sn_s1_MA.rda")
+```
+
+#### Blacknose
+```{r, eval=TRUE}
+bn_s1_MA$results[c(1:20), c(1:4,7)]
+
+bn.top_s1_MA <- bn_s1_MA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal_Dis
+
+summary(bn.top_s1_MA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bn.top_s1_MA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:8 ){
+  
+  plot( bn.top_s1_MA,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Blacktip
+```{r, eval=TRUE}
+bt_s1_MA$results[c(1:20), c(1:4,7)]
+
+bt.top_s1_MA <- bt_s1_MA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Dis
+
+summary(bt.top_s1_MA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bt.top_s1_MA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:7 ){
+  
+  plot( bt.top_s1_MA,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Bull
+```{r}
+bu_s1_MA$results[c(1:20), c(1:4,7)]
+
+bu.top_s1_MA <- bu_s1_MA$model_fits$Lat_Lon_Root_Dep_Turb_Dis
+
+summary(bu.top_s1_MA)
+```
+WOW!!! lol only 1 male Adult Bull shark...
+
+#### Sandbar
+```{r}
+sb_s1_MA$results[c(1:20), c(1:4,7)]
+
+sb.top_s1_MA <- sb_s1_MA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Dis
+
+summary(sb.top_s1_MA)
+```
+
+
+#### Sharpnose
+```{r, eval=TRUE}
+sn_s1_MA$results[c(1:20), c(1:4,7)]
+
+sn.top_s1_MA <- sn_s1_MA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal
+
+summary(sn.top_s1_MA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(sn.top_s1_MA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:7 ){
+  
+  plot( sn.top_s1_MA,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Spinner
+```{r}
+sp_s1_MA$results[c(1:20), c(1:4,7)]
+
+sp.top_s1_MA <- sp_s1_MA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal_Dis
+
+summary(sp.top_s1_MA)
+```
+WOW!!! Unlikely
+
+#### Tiger
+```{r}
+ti_s1_MA$results[c(1:20), c(1:4,7)]
+
+ti.top_s1_MA <- ti_s1_MA$model_fits$Lat_Lon_Dis
+
+summary(ti.top_s1_MA)
+```
+WOW!!! Unlikely
+
+
+### Juvenile ###
+```{r Load S1_MJ, eval=FALSE}
+#### Strata 1 ####
+  ## Male Juvenile
+filenames_s1_MJ <- list.files("output/output_GAM/strat1/Male_Juvenile", pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_s1_MJ ) ){ load( file = filenames_s1_MJ[ i ] ) }
+
+rm( filenames_s1_MJ )
+```
+```{r,echo=FALSE, eval=TRUE}
+load("output/output_GAM/strat1/Male_Juvenile/bn_s1_MJ.rda")
+load("output/output_GAM/strat1/Male_Juvenile/bt_s1_MJ.rda")
+load("output/output_GAM/strat1/Male_Juvenile/sn_s1_MJ.rda")
+```
+
+#### Blacknose
+```{r, eval=TRUE}
+bn_s1_MJ$results[c(1:20), c(1:4,7)]
+
+bn.top_s1_MJ <- bn_s1_MJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Dis
+
+summary(bn.top_s1_MJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bn.top_s1_MJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:7 ){
+  
+  plot( bn.top_s1_MJ,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Blacktip
+```{r, eval=TRUE}
+bt_s1_MJ$results[c(1:20), c(1:4,7)]
+
+bt.top_s1_MJ <- bt_s1_MJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal_Dis
+
+summary(bt.top_s1_MJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bt.top_s1_MJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:8 ){
+  
+  plot( bt.top_s1_MJ,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Bull
+```{r}
+bu_s1_MJ$results[c(1:20), c(1:4,7)]
+
+bu.top_s1_MJ <- bu_s1_MJ$model_fits$Lat_Lon_Root_Dep_Turb_Oxy_Sal
+
+summary(bu.top_s1_MJ)
+```
+
+
+#### Sandbar
+```{r}
+sb_s1_MJ$results[c(1:20), c(1:4,7)] ### Top 7 dAIC < 4
+### Lat_Lon in Model 4
+
+sb.top_s1_MJ <- sb_s1_MJ$model_fits$Root_Dep_Temp_Turb_Oxy_Sal_Dis
+
+summary(sb.top_s1_MJ)
+
+
+sb.top4_s1_MJ <- sb_s1_MJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal
+
+summary(sb.top4_s1_MJ)
+```
+
+
+#### Sharpnose
+```{r, eval=TRUE}
+sn_s1_MJ$results[c(1:20), c(1:4,7)]
+
+sn.top_s1_MJ <- sn_s1_MJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal
+
+summary(sn.top_s1_MJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(sn.top_s1_MJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:7 ){
+  
+  plot( sn.top_s1_MJ,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Spinner
+```{r}
+sp_s1_MJ$results[c(1:20), c(1:4,7)]
+
+sp.top_s1_MJ <- sp_s1_MJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal_Dis
+
+summary(sp.top_s1_MJ)
+```
+
+
+#### Tiger
+```{r}
+ti_s1_MJ$results[c(1:20), c(1:4,7)] ### Top 21 dAIC < 4
+
+ti.top_s1_MJ <- ti_s1_MJ$model_fits$Lat_Lon_Root_Dep_Turb
+
+summary(ti.top_s1_MJ)
+```
+
+
+# Strata 2
+## Female ##
+### Adult ###
+```{r Load S2_FA, eval=FALSE}
+#### Strata 2 ####
+  ## Female Adult
+filenames_s2_FA <- list.files("output/output_GAM/strat2/Female_Adult", pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_s2_FA ) ){ load( file = filenames_s2_FA[ i ] ) }
+
+rm( filenames_s2_FA )
+```
+```{r,echo=FALSE, eval=TRUE}
+load("output/output_GAM/strat2/Female_Adult/bn_s2_FA.rda")
+load("output/output_GAM/strat2/Female_Adult/bt_s2_FA.rda")
+load("output/output_GAM/strat2/Female_Adult/sn_s2_FA.rda")
+```
+
+#### Blacknose
+```{r, eval=TRUE}
+bn_s2_FA$results[c(1:20), c(1:4,7)]
+
+bn.top.s2_FA <- bn_s2_FA$model_fits$Lat_Lon_Turb_Dis
+
+summary(bn.top.s2_FA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bn.top.s2_FA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:4 ){
+  
+  plot( bn.top.s2_FA,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Blacktip
+```{r, eval=TRUE}
+bt_s2_FA$results
+
+bt.top.s2_FA <- bt_s2_FA$model_fits$Lat_Lon_Turb_Oxy_Sal_Dis_Bottm
+
+summary(bt.top.s2_FA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bt.top.s2_FA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:7 ){
+  
+  plot( bt.top.s2_FA,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Bull
+
+*FAILED to fit model*
+
+```{r, eval=FALSE}
+bu_s2_FA$results
+
+bu.top.s2_FA <- bu_s2_FA$model_fits
+
+summary(bu.top.s2_FA)
+```
+
+
+#### Sandbar
+```{r}
+sb_s2_FA$results
+
+sb.top.s2_FA <- sb_s2_FA$model_fits$Lat_Lon_Temp_Turb_Dis
+
+summary(sb.top.s2_FA)
+```
+
+
+#### Sharpnose
+```{r, eval=TRUE}
+sn_s2_FA$results
+
+sn.top.s2_FA <- sn_s2_FA$model_fits$Lat_Lon_Temp_Turb_Sal
+
+summary(sn.top.s2_FA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(sn.top.s2_FA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:5 ){
+  
+  plot( sn.top.s2_FA,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Spinner
+
+*Failed to Fit*
+
+```{r, eval=FALSE}
+sp_s2_FA$results
+
+sp.top.s2_FA <- sp_s2_FA$model_fits
+
+summary(sp.top.s2_FA)
+```
+
+
+#### Tiger
+
+
+*Failed to Fit*
+
+```{r, eval=FALSE}
+ti_s2_FA$results
+
+ti.top.s2_FA <- ti_s2_FA$model_fits
+
+summary(ti.top.s2_FA)
+```
 
 
 
 
 
+### Juvenile ###
+```{r Load S2_FJ, eval=FALSE}
+#### Strata 2 ####
+  ## Female Juvenile
+filenames_s2_FJ <- list.files("output/output_GAM/strat2/Female_Juvenile", pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_s2_FJ ) ){ load( file = filenames_s2_FJ[ i ] ) }
+
+rm( filenames_s2_FJ )
+```
+
+```{r,echo=FALSE, eval=TRUE}
+load("output/output_GAM/strat2/Female_Juvenile/bn_s2_FJ.rda")
+load("output/output_GAM/strat2/Female_Juvenile/bt_s2_FJ.rda")
+load("output/output_GAM/strat2/Female_Juvenile/sn_s2_FJ.rda")
+```
+
+#### Blacknose
+```{r, eval=TRUE}
+bn_s2_FJ$results
+
+bn.top.s2_FJ <- bn_s2_FJ$model_fits$Lat_Lon_Temp_Turb_Oxy_Sal_Bottm
+
+summary(bn.top.s2_FJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bn.top.s2_FJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:7 ){
+  
+  plot( bn.top.s2_FJ,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
 
 
 
 
+#### Blacktip
+```{r, eval=TRUE}
+bt_s2_FJ$results
+
+bt.top.s2_FJ <- bt_s2_FJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal
+
+summary(bt.top.s2_FJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bt.top.s2_FJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:7 ){
+  
+  plot( bt.top.s2_FJ,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Bull
+
+*FAILED To Fit*
+
+```{r, eval=FALSE}
+bu_s2_FJ$results
+
+bu.top.s2_FJ <- bu_s2_FJ$model_fits
+
+summary(bu.top.s2_FJ)
+```
+
+
+#### Sandbar
+```{r}
+sb_s2_FJ$results
+
+sb.top.s2_FJ <- sb_s2_FJ$model_fits$Lat_Lon_Turb_Dis
+
+summary(sb.top.s2_FJ)
+```
+
+
+#### Sharpnose
+```{r, eval=TRUE}
+sn_s2_FJ$results
+
+sn.top.s2_FJ <- sn_s2_FJ$model_fits$Lat_Lon_Temp_Turb_Dis_Bottm
+
+summary(sn.top.s2_FJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(sn.top.s2_FJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:6 ){
+  
+  plot( sn.top.s2_FJ,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Spinner
+```{r}
+sp_s2_FJ$results
+
+sp.top.s2_FJ <- sp_s2_FJ$model_fits$Lat_Lon_Temp_Turb_Sal_Dis
+
+summary(sp.top.s2_FJ)
+```
+
+
+#### Tiger
+```{r}
+ti_s2_FJ$results
+
+ti.top.s2_FJ <- ti_s2_FJ$model_fits$Lat_Lon_Temp_Turb_Dis_Bottm
+
+summary(ti.top.s2_FJ)
+```
+
+
+
+## Male ##
+### Adult ###
+```{r Load S2_MA, eval=FALSE}
+#### Strata 2 ####
+  ## Male Adult
+filenames_s2_MA <- list.files("output/output_GAM/strat2/Male_Adult", pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_s2_MA ) ){ load( file = filenames_s2_MA[ i ] ) }
+
+rm( filenames_s2_MA )
+```
+```{r, eval=TRUE}
+load("output/output_GAM/strat2/Male_Adult/bn_s2_MA.rda")
+load("output/output_GAM/strat2/Male_Adult/bt_s2_MA.rda")
+load("output/output_GAM/strat2/Male_Adult/sn_s2_MA.rda")
+```
+
+#### Blacknose
+```{r, eval=TRUE}
+bn_s2_MA$results
+
+bn.top.s2_MA <- bn_s2_MA$model_fits$Lat_Lon_Temp_Turb_Oxy_Sal_Bottm
+
+summary(bn.top.s2_MA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bn.top.s2_MA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:7 ){
+  
+  plot( bn.top.s2_MA,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Blacktip
+```{r, eval=TRUE}
+bt_s2_MA$results
+
+bt.top.s2_MA <- bt_s2_MA$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Sal_Dis
+
+summary(bt.top.s2_MA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bt.top.s2_MA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:7 ){
+  
+  plot( bt.top.s2_MA,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Bull
+
+*FAILED To Fit*
+
+```{r, eval=FALSE}
+bu_s2_MA$results
+
+bu.top.s2_MA <- bu_s2_MA$model_fits
+
+summary(bu.top.s2_MA)
+```
+
+
+#### Sandbar
+
+*FAILED To Fit*
+
+```{r, eval=FALSE}
+sb_s2_MA$results
+
+sb.top.s2_MA <- sb_s2_MA$model_fits
+
+summary(sb.top.s2_MA)
+```
+
+
+#### Sharpnose
+```{r, eval=TRUE}
+sn_s2_MA$results
+
+sn.top.s2_MA <- sn_s2_MA$model_fits$Lat_Lon_Root_Dep_Turb_Oxy_Sal_Dis_Bottm
+
+summary(sn.top.s2_MA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(sn.top.s2_MA)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:8 ){
+  
+  plot( sn.top.s2_MA,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Spinner
+
+*FAILED To Fit*
+
+```{r, eval=FALSE}
+sp_s2_MA$results
+
+sp.top.s2_MA <- sp_s2_MA$model_fits
+
+summary(sp.top.s2_MA)
+```
+
+
+#### Tiger
+
+*FAILED To Fit*
+
+```{r, eval=FALSE}
+ti_s2_MA$results
+
+ti.top.s2_MA <- ti_s2_MA$model_fits
+
+summary(ti.top.s2_MA)
+```
+
+
+### Juvenile ###
+```{r Load S2_MJ, eval=FALSE}
+#### Strata 2 ####
+  ## Male Juvenile
+filenames_s2_MJ <- list.files("output/output_GAM/strat2/Male_Juvenile", pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_s2_MJ ) ){ load( file = filenames_s2_MJ[ i ] ) }
+
+rm( filenames_s2_MJ )
+```
+```{r,echo=FALSE, eval=TRUE}
+load("output/output_GAM/strat2/Male_Juvenile/bn_s2_MJ.rda")
+load("output/output_GAM/strat2/Male_Juvenile/bt_s2_MJ.rda")
+load("output/output_GAM/strat2/Male_Juvenile/sn_s2_MJ.rda")
+```
+
+#### Blacknose
+```{r, eval=TRUE}
+bn_s2_MJ$results
+
+bn.top.s2_MJ <- bn_s2_MJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal_Bottyp
+
+summary(bn.top.s2_MJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bn.top.s2_MJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:8 ){
+  
+  plot( bn.top.s2_MJ,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Blacktip
+```{r, eval=TRUE}
+bt_s2_MJ$results
+
+bt.top.s2_MJ <- bt_s2_MJ$model_fits$Lat_Lon_Root_Dep_Turb_Oxy_Sal
+
+summary(bt.top.s2_MJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(bt.top.s2_MJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:5 ){
+  
+  plot( bt.top.s2_MJ,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Bull
+
+*Failed to fit*
+
+```{r, eval=FALSE}
+bu_s2_MJ$results
+
+bu.top.s2_MJ <- bu_s2_MJ$model_fits
+
+summary(bu.top.s2_MJ)
+```
+
+
+#### Sandbar
+```{r}
+sb_s2_MJ$results
+
+sb.top.s2_MJ <- sb_s2_MJ$model_fits$Lat_Lon_Turb_Sal
+
+summary(sb.top.s2_MJ)
+```
+
+
+#### Sharpnose
+```{r, eval=TRUE}
+sn_s2_MJ$results
+
+sn.top.s2_MJ <- sn_s2_MJ$model_fits$Lat_Lon_Temp_Turb_Oxy_Sal
+
+summary(sn.top.s2_MJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(2,2))
+
+gam.check(sn.top.s2_MJ)
+```
+
+
+```{r, eval=TRUE}
+par(mfrow = c(1,1))
+
+for(i in 2:6 ){
+  
+  plot( sn.top.s2_MJ,
+       select = i)
+  abline(h = 0, col = "red", lty = 3)
+
+  }
+```
+
+
+
+
+#### Spinner
+```{r}
+sp_s2_MJ$results ### top 11 dAIC < 4
+### Lat_Lon in Top 2
+
+sp.top.s2_MJ <- sp_s2_MJ$model_fits$Root_Dep_Temp_Turb_Oxy_Sal
+
+summary(sp.top.s2_MJ)
+
+sp.top2.s2_MJ <- sp_s2_MJ$model_fits$Lat_Lon_Root_Dep_Temp_Turb_Oxy_Sal
+
+summary(sp.top2.s2_MJ)
+```
+
+
+#### Tiger
+```{r}
+ti_s2_MJ$results ### Top 110 dAIC < 4
+
+### Lat_Lon in Top 57
+
+ti.top.s2_MJ <- ti_s2_MJ$model_fits$Temp_Oxy_Dis_Bottyp
+
+summary(ti.top.s2_MJ)
+
+
+ti.top57.s2_MJ <- ti_s2_MJ$model_fits$Lat_Lon_Oxy_Dis_Bottyp
+
+summary(ti.top57.s2_MJ)
+```
 
 
 

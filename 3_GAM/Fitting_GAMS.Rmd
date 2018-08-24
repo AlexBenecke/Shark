@@ -1,0 +1,262 @@
+---
+title: "Fit Gams"
+author: "Alex Benecke"
+date: "August 6, 2018"
+output:   
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    fig_width: 8
+    fig_height: 6
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r Load Packages, include=FALSE}
+### Load Packages
+library(FSA)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(scales)
+library(mgcv)
+library(sciplot)
+#source("plot_centered_mean.R")
+
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" # Specify project where data is stored 
+
+source("5_functions/model_selection_fn.R")
+```
+
+I will fit Gam Models here for all species using 2 strata.
+
+i. Presence abscence uith binomial error distribution and log link
+
+ii. CPUE positive catch only with a Gamma error distribution and a log link
+
+
+
+
+
+```{r Load Data, echo=FALSE, include=FALSE}
+### Blacknose
+blacknose <- read_csv_fn( "data/clean-data/blacknose.csv", proj) %>%
+  mutate(YEAR = factor(YEAR), 
+         MONTH = factor(strftime(DATE, format = "%b")))
+
+### Blacktip
+blacktip <- read_csv_fn( "data/clean-data/blacktip.csv", proj) %>%
+  mutate(YEAR = factor(YEAR), 
+         MONTH = factor(strftime(DATE, format = "%b")))
+
+### Bull
+bull <- read_csv_fn( "data/clean-data/bull.csv", proj) %>%
+  mutate(YEAR = factor(YEAR), 
+         MONTH = factor(strftime(DATE, format = "%b")))
+
+### Sandbar
+sandbar <- read_csv_fn( "data/clean-data/sandbar.csv", proj) %>%
+  mutate(YEAR = factor(YEAR), 
+         MONTH = factor(strftime(DATE, format = "%b")))
+
+### Sharpnose
+sharpnose <- read_csv_fn( "data/clean-data/sharpnose.csv", proj) %>%
+  mutate(YEAR = factor(YEAR), 
+         MONTH = factor(strftime(DATE, format = "%b")))
+
+### Silky
+silky <- read_csv_fn( "data/clean-data/silky.csv", proj) %>%
+  mutate(YEAR = factor(YEAR), 
+         MONTH = factor(strftime(DATE, format = "%b")))
+
+### Spinner
+spinner <- read_csv_fn( "data/clean-data/spinner.csv", proj) %>%
+  mutate(YEAR = factor(YEAR), 
+         MONTH = factor(strftime(DATE, format = "%b")))
+
+### Tiger
+tiger <- read_csv_fn( "data/clean-data/tiger.csv", proj) %>%
+  mutate(YEAR = factor(YEAR), 
+         MONTH = factor(strftime(DATE, format = "%b")))
+
+### Strata 1 list
+strat1 <- list(blacknose = blacknose,
+              blacktip = blacktip,
+              bull = bull,
+              sandbar = sandbar,
+              sharpnose = sharpnose,
+              silky = silky,
+              spinner = spinner,
+              tiger = tiger)
+
+
+### Strata 2 List
+
+
+strat2 <- list(blacknose = blacknose %>% subset(pres == 1),
+              blacktip = blacktip %>% subset(pres == 1),
+              bull = bull %>% subset(pres == 1),
+              sandbar = sandbar %>% subset(pres == 1),
+              sharpnose = sharpnose %>% subset(pres == 1),
+              silky = silky %>% subset(pres == 1),
+              spinner = spinner %>% subset(pres == 1),
+              tiger = tiger %>% subset(pres == 1))
+```
+
+
+```{r check that strat1 and strat2 are different, include=FALSE}
+nrow(strat2$blacknose)
+nrow(strat1$blacknose)
+```
+
+
+
+
+## Strata 1 ##
+
+```{r fit strata 1 GAM Models}
+
+output_names_strat1 <- c("bn_gam_strat_1", "bt_gam_strat_1", "bu_gam_strat_1", "sb_gam_strat_1", 
+                         "sn_gam_strat_1", "si_gam_strat_1", "sp_gam_strat_1", "ti_gam_strat_1")
+
+time_fit_strat1 <- c("bn.time.1", "bt.time.1", "bu.time.1", "sb.time.1",
+                     "sn.time.1", "si.time.1", "sp.time.1", "ti.time.1")
+
+
+
+for(a in 1:length(strat1)){
+  
+time_fit_strat1[a] <- system.time(
+  
+  output_names_strat1[a] <-   gam_select_fn(data = strat1[[a]],
+                                            family = binomial(link = log),
+                                            response = "pres",
+                                            smooth_terms = c("s(STARTLON, STARTLAT, k = k_i[[i]]['k_0','Lat-Lon'])",
+                                                             "s(I(AVG.DEPTH^0.25), k = k_i[[i]]['k_0', 'Dep'])",
+                                                             "s(TEMPBOTM, k = k_i[[i]]['k_0', 'Temp'])",
+                                                             "s(TURBBOTM, k = k_i[[i]]['k_0', 'Turb'])",
+                                                             "s(OXYBOTM, k = k_i[[i]]['k_0', 'Oxy'])",
+                                                             "s(SALBOTM, k = k_i[[i]]['k_0', 'Sal'])",
+                                                             "s(Dis.to.SHORE, k = k_i[[i]]['k_0', 'Dis'])",
+                                                             "s(YEAR, bs = 're')"),
+                                            smooth_names = c("Lat_Lon","Root_Dep", "Temp", "Turb",
+                                                   "Oxy", "Sal", "Dis"),
+                                            rand_eff_smooth = "yr",
+                                            gamma = 1,
+                                            in_parallel = FALSE,
+                                            est_k = TRUE)
+  
+)
+
+save(output_names_strat1[a], file = paste0("output/output_Gam/", output_names_strat1[a], ".rda"))
+  
+}
+
+
+```
+
+```{r test}
+
+test_1 <-   gam_select_fn(data = strat1[[1]],
+                family = binomial(link = log),
+                response = "pres",
+                smooth_terms = c("s(STARTLON, STARTLAT, k = k_i[[i]]['k_0','Lat-Lon'])",
+                                 "s(I(AVG.DEPTH^0.25), k = k_i[[i]]['k_0', 'Dep'])",
+                                 "s(TEMPBOTM, k = k_i[[i]]['k_0', 'Temp'])",
+                                 "s(TURBBOTM, k = k_i[[i]]['k_0', 'Turb'])",
+                                 "s(OXYBOTM, k = k_i[[i]]['k_0', 'Oxy'])",
+                                 "s(SALBOTM, k = k_i[[i]]['k_0', 'Sal'])",
+                                 "s(Dis.to.SHORE, k = k_i[[i]]['k_0', 'Dis'])",
+                                 "s(YEAR, bs = 're')"),
+                                  smooth_names = c("Lat_Lon","Dep", "Temp", "Turb",
+                                                   "Oxy", "Sal", "Dis"),
+                rand_eff_smooth = "yr",
+                gamma = 1,
+                in_parallel = FALSE,
+                est_k = TRUE)
+
+```
+
+
+## Strata2
+
+
+```{r fit strata 1 GAM Models}
+
+output_names_strat2 <- c("bn_gam_strat_2", "bt_gam_strat_2", "bu_gam_strat_2", "sb_gam_strat_2", 
+                         "sn_gam_strat_2", "si_gam_strat_2", "sp_gam_strat_2", "ti_gam_strat_2")
+
+time_fit_strat2 <- c("bn.time.2", "bt.time.2", "bu.time.2", "sb.time.2",
+                     "sn.time.2", "si.time.2", "sp.time.2", "ti.time.2")
+
+
+
+for(a in 1:length(strat1)){
+  
+time_fit_strat2[b] <- system.time(
+  
+  output_names_strat2[b] <-   gam_select_fn(data = strat2[[b]],
+                                            family = Gamma(link = log),
+                                            response = "(cpe + 1)",
+                                            smooth_terms = c("s(STARTLON, STARTLAT, k = k_i[[i]]['k_0','Lat-Lon'])",
+                                                             "s(I(AVG.DEPTH^0.25), k = k_i[[i]]['k_0', 'Dep'])",
+                                                             "s(TEMPBOTM, k = k_i[[i]]['k_0', 'Temp'])",
+                                                             "s(TURBBOTM, k = k_i[[i]]['k_0', 'Turb'])",
+                                                             "s(OXYBOTM, k = k_i[[i]]['k_0', 'Oxy'])",
+                                                             "s(SALBOTM, k = k_i[[i]]['k_0', 'Sal'])",
+                                                             "s(Dis.to.SHORE, k = k_i[[i]]['k_0', 'Dis'])",
+                                                             "s(YEAR, bs = 're')"),
+                                            smooth_names = c("Lat_Lon","Root_Dep", "Temp", "Turb",
+                                                   "Oxy", "Sal", "Dis"),
+                                            rand_eff_smooth = "yr",
+                                            gamma = 1,
+                                            in_parallel = FALSE,
+                                            est_k = TRUE)
+  
+)
+
+save(output_names_strat2[b], file = paste0("output/output_Gam/", output_names_strat2[b], ".rda"))
+  
+}
+
+
+```
+
+```{r test strata 2}
+
+  gam_select_fn(data = strat2[[1]],
+                family = Gamma(link = log),
+                response = "(cpe + 1)",
+                smooth_terms = c("s(STARTLON, STARTLAT, k = k_i[[i]]['k_0','Lat-Lon'])",
+                                 "s(I(AVG.DEPTH^0.25), k = k_i[[i]]['k_0', 'Dep'])",
+                                 "s(TEMPBOTM, k = k_i[[i]]['k_0', 'Temp'])",
+                                 "s(TURBBOTM, k = k_i[[i]]['k_0', 'Turb'])",
+                                 "s(OXYBOTM, k = k_i[[i]]['k_0', 'Oxy'])",
+                                 "s(SALBOTM, k = k_i[[i]]['k_0', 'Sal'])",
+                                 "s(Dis.to.SHORE, k = k_i[[i]]['k_0', 'Dis'])",
+                                 "s(YEAR, bs = 're')"),
+                                  smooth_names = c("Lat_Lon","Dep", "Temp", "Turb",
+                                                   "Oxy", "Sal", "Dis"),
+                rand_eff_smooth = "yr",
+                gamma = 1,
+                in_parallel = FALSE,
+                est_k = TRUE)
+
+``
+
+
+
+
+
+
+
+
+
+
+
+
+
+
