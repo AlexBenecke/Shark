@@ -1,9 +1,9 @@
 ### get path to dropbox folder
 
-path_get <- function(proj = proj, folder_data = folder_data){
+path_get <- function( file = file, proj = proj){
   
   path_proj_data <- paste("C://Users//W10039893//Dropbox//data", 
-                          proj, folder_data, sep = "//")
+                          proj, file, sep = "//")
   
   return(path_proj_data)
   
@@ -12,13 +12,13 @@ path_get <- function(proj = proj, folder_data = folder_data){
 
 ### Load data Function
 
-read_csv_fn <- function(proj = proj, folder_data = folder_data){
+read_csv_fn <- function( folder_data = folder_data, proj = proj, na.strings = "NA"){
   
   
   path_proj_data <- paste("C:/Users/W10039893/Dropbox/data", 
                           proj, sep = "/")
   
-  df <- read.csv(paste(path_proj_data, folder_data, sep = "/"))
+  df <- read.csv(paste(path_proj_data, folder_data, sep = "/"), na.strings = na.strings)
   
   return(df)
   
@@ -27,7 +27,7 @@ read_csv_fn <- function(proj = proj, folder_data = folder_data){
 
 ### Save data function
 
-write_csv_fn <- function(proj = proj, object = object, file = file, row.names = FALSE){
+write_csv_fn <- function( object = object, file = file, proj = proj, row.names = FALSE){
   
   path_proj_data <- paste("C:/Users/W10039893/Dropbox/data", 
                           proj, sep = "/")
@@ -39,23 +39,23 @@ write_csv_fn <- function(proj = proj, object = object, file = file, row.names = 
 
 ### save .rda
 
-save_fn <- function(proj = proj, object = object, folder_data = folder_data){
+save_fn <- function( object = object, file = file, proj = proj){
   
   path_proj_data <- paste("C:/Users/W10039893/Dropbox/data", 
                           proj, sep = "/")
   
-  save(object, file = paste(path_proj_data, folder_data, sep = "/"))
+  save(object, file = paste(path_proj_data, file, sep = "/"))
   
 }
 
 ### Load .rda ### FAILS ### Use getpath with base load
 
-load_fn <- function(proj = proj, folder_data = folder_data){
+load_fn <- function( file = file, proj = proj){
   
   path_proj_data <- paste("C:/Users/W10039893/Dropbox/data", 
                           proj, sep = "/")
   
-  return( load( file = paste(path_proj_data, folder_data, sep = "/") )
+  return( load( file = paste(path_proj_data, file, sep = "/") )
   )
   
 }
