@@ -1,0 +1,914 @@
+---
+title: "Full Shark Analysis"
+author: "Alex Benecke"
+date: "July 23, 2018"
+output:  
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 5
+    fig_width: 8
+    fig_height: 6
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load Packages, include=FALSE}
+
+### Load Packages
+library(FSA)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(scales)
+library(mgcv)
+library(sciplot)
+
+### Load My Functions
+source("functions/my_summary.R")
+source("functions/k_est_fn.R")
+source("functions/fit_gam.R")
+source("functions/taxa-function.R")
+source("functions/scatter_fn.R")
+source("functions/hist_fn.R")
+```
+
+
+```{r Load Data, echo=FALSE, include=FALSE}
+eff2 <- read.csv("data/CPUE2.csv")
+
+
+blacknose <- read.csv("data/acronotus.df.csv") 
+blacknose$DATE <- as.POSIXlt(blacknose$DATE)
+blacknose$MONTH <- factor(strftime(blacknose$DATE, format = "%b"))
+blacknose$YEAR <- factor(blacknose$YEAR)
+tmp.bn <- blacknose[blacknose$cpe>0,]
+      
+str(blacknose)
+
+
+blacktip <- read.csv("data/limbatus.df.csv")
+blacktip$DATE <- as.POSIXlt(blacktip$DATE)
+blacktip$MONTH  <- factor(strftime(blacktip$DATE, format = "%b"))
+blacktip$YEAR <- factor(blacktip$YEAR)
+tmp.bt <- blacktip[blacktip$cpe>0,]
+
+str(blacktip)
+
+bull <- read.csv("data/leucas.df.csv")
+bull$DATE <- as.POSIXlt(bull$DATE)
+bull$MONTH  <- factor(strftime(bull$DATE, format = "%b"))
+bull$YEAR <- factor(bull$YEAR)
+tmp.bu <- bull[bull$cpe>0,]
+
+str(bull)
+
+sandbar <- read.csv("data/plumbeus.df.csv")
+sandbar$DATE <- as.POSIXlt(sandbar$DATE)
+sandbar$MONTH  <- factor(strftime(sandbar$DATE, format = "%b"))
+sandbar$YEAR <- factor(sandbar$YEAR)
+tmp.sb <- sandbar[sandbar$cpe>0,]
+
+str(sandbar)
+
+sharpnose <- read.csv("data/terraenovae.df.csv")
+sharpnose$DATE <- as.POSIXlt(sharpnose$DATE)
+sharpnose$MONTH  <- factor(strftime(sharpnose$DATE, format = "%b"))
+sharpnose$YEAR <- factor(sharpnose$YEAR)
+tmp.sn <- sharpnose[sharpnose$cpe>0,]
+
+str(sharpnose)
+
+silky <- read.csv("data/falciformis.df.csv")
+silky$DATE <- as.POSIXlt(silky$DATE)
+silky$MONTH  <- factor(strftime(silky$DATE, format = "%b"))
+silky$YEAR <- factor(silky$YEAR)
+tmp.si <- silky[silky$cpe>0,]
+
+str(silky)
+
+spinner <- read.csv("data/brevipinna.df.csv")
+spinner$DATE <- as.POSIXlt(spinner$DATE)
+spinner$MONTH <- factor(strftime(spinner$DATE, format = "%b"))
+spinner$YEAR <- factor(spinner$YEAR)
+tmp.sp <- spinner[spinner$cpe>0,]
+
+str(spinner)
+
+tiger <- read.csv("data/cuvier.df.csv")
+tiger$DATE <- as.POSIXlt(tiger$DATE)
+tiger$MONTH  <- factor(strftime(tiger$DATE, format = "%b"))
+tiger$YEAR <- factor(tiger$YEAR)
+tmp.ti <- tiger[tiger$cpe>0,]
+
+str(tiger)
+
+
+#sp.df <- list(blacknose = blacknose,
+#              blacktip = blacktip,
+#              bull = bull,
+#              sandbar = sandbar,
+#              sharpnose = sharpnose,
+#              silky = silky,
+#              spinner = spinner,
+#              tiger = tiger)
+
+
+```
+
+```{r Load Models, echo=FALSE}
+load(file = "model-output/bn_gam_fits.rda")
+
+load(file = "model-output/sp_gam_fits.rda")
+
+load(file = "model-output/si_gam_fits.rda")
+
+load(file = "model-output/bu_gam_fits.rda")
+
+load(file = "model-output/bt_gam_fits.rda")
+
+load(file = "model-output/sb_gam_fits.rda")
+
+load(file = "model-output/ti_gam_fits.rda")
+
+load(file = "model-output/sn_gam_fits.rda")
+
+load(file = "model-output/bn_gam_select_1.rda")
+load(file = "model-output/bt_gam_select.rda")
+load(file = "model-output/bu_gam_select.rda") 
+load(file = "model-output/sb_gam_select.rda")
+load(file = "model-output/sn_gam_select.rda")
+load(file = "model-output/sn_gam_select_2.rda")
+load(file = "model-output/si_gam_select.rda")
+load(file = "model-output/sp_gam_select.rda")
+load(file = "model-output/ti_gam_select.rda")
+
+```
+
+
+## Data Exploration ## 
+
+
+## QA/QC ## 
+
+** NOTE: I Need to change or CHECK ez,names is correct**
+
+```{r create sp data frame from eff2,csv, cache=TRUE}
+
+### CARCHARHINUS.ACRONOTUS (Blacknose)
+
+### CARCHARHINUS.LIMBATUS (Blacktip)
+
+### CARCHARHINUS.LEUCAS (Bull)
+
+### CARCHARHINUS.PLUMBEUS (Sandbar)
+
+### RHIZOPRIONODON.TERRAENOVAE (Sharpnose)
+
+### CARCHARHINUS.FALCIFORMIS (Silky)
+
+### CARCHARHINUS.BREVIPINNA (Spinner)
+
+### GALEOCERDO.CUVIER (Tiger)
+
+sp.df <- list(blacknose.df = acronotus.df <- extract.taxa.df.fun(eff2,
+                             eff2$CARCHARHINUS.ACRONOTUS),
+              
+              blacktip.df = extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.LIMBATUS),
+              
+              bull.df = extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.LEUCAS),
+              
+              sandbar.df = extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.PLUMBEUS),
+              
+              sharpnose.df = extract.taxa.df.fun(eff2,
+                                     eff2$RHIZOPRIONODON.TERRAENOVAE),
+              
+              silky.df = extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.FALCIFORMIS),
+              
+              spinner.df = extract.taxa.df.fun(eff2,
+                                    eff2$CARCHARHINUS.BREVIPINNA),
+              
+              tiger.df = extract.taxa.df.fun(eff2,
+                                     eff2$GALEOCERDO.CUVIER))
+
+```
+
+### Scatterplots of CPE vs Explanatory variables
+
+```{r Plot explanatory variables vs cpe, cache=TRUE}
+
+scatter_fn(sp.df)
+```
+Looks like we have a few Outliers.
+
+### Identify Outliers
+
+```{r Outliers, cache=TRUE}
+summary(eff2[c(6:8,12,38:50)])
+
+par(mfrow=c(1,1))
+plot(eff2$STARTLON,eff2$STARTLAT)
+plot(eff2$ENDLON,eff2$ENDLAT)
+
+#### outlier notes
+
+range(eff2$SALBOTM, na.rm = TRUE)
+
+(rm.Sal <- which(eff2$SALBOTM > 40 | eff2$SALBOTM < 15)) ### 507  932 2705 2770 2771 2941 2979
+
+eff2[c(rm.Sal),c(1,42)]
+
+#(rm.EndLon <- which(eff2$ENDLON > -80)) ### 1465 >>> just always use STARTLON and STARTLAT
+
+
+range(eff2$OXYBOTM, na.rm = TRUE)
+
+(oxy <- which(eff2$OXYBOTM == 0))
+
+eff2[c(oxy),]
+
+
+(rm.Oxy <- which(eff2$OXYBOTM > 12 | eff2$OXYBOTM == 0)) ### 99 100 338 339 411 625 652 823 824 
+
+eff2[c(rm.Oxy),c(1,41,43:50)]
+
+
+ ### TURBBOTM and FLUOROBOTM are not used as explanitory variables so there is no need to remove outliers
+
+#(rm.Turb <- which(eff2$TURBBOTM > 120)) ### 1994
+
+#(rm.Fluo <-which(eff2$FLUOROBOTM > 30)) ### 1536, 1802, 2230, 2660, 2704
+
+
+(n.rm <- length(rm.Sal) + length(rm.Oxy))
+
+```
+
+Major outlier in **ENDLON**. I will just use STARTLAT and STARTLON.
+
+Remove all **SALBOTM** lexx than 15 and more than 40, $n = $ `r length(rm.Sal)`.
+
+Remove all **OXYBOTM** equal to 0 and greater than 12, $n =$ `r length(rm.Oxy)`.
+
+Keep outliers in **TURBBOTM** and **FLUOROBOTM** because we are not using these explanatory variables.
+
+Total outliers to remove $n = $ `r n.rm`.
+
+### Remove outliers from eff2 df
+
+```{r Remove outliers}
+### Remove Outliers
+
+  ### round 1 ###rm.EndLon
+(rm1 <- c(rm.Sal,rm.Oxy))
+
+### round 2
+#(rm2 <- c(rm.Oxy, rm.Turb, rm.Fluo))
+
+
+
+
+eff2 <- eff2[-c(rm1),]
+######
+
+#str(eff2)
+#write.csv(eff2,"data/CPUE3.csv", row.names = FALSE)
+
+```
+
+remaining data $n = $ `r nrow(eff2)`.
+
+### create new species data.frames
+```{r create species data files, cache=TRUE}
+### CARCHARHINUS.ACRONOTUS (Blacknose)
+
+### CARCHARHINUS.LIMBATUS (Blacktip)
+
+### CARCHARHINUS.LEUCAS (Bull)
+
+### CARCHARHINUS.PLUMBEUS (Sandbar)
+
+### RHIZOPRIONODON.TERRAENOVAE (Sharpnose)
+
+### CARCHARHINUS.FALCIFORMIS (Silky)
+
+### CARCHARHINUS.BREVIPINNA (Spinner)
+
+### GALEOCERDO.CUVIER (Tiger)
+
+sp.df <- list(blacknose.df = acronotus.df <- extract.taxa.df.fun(eff2,
+                             eff2$CARCHARHINUS.ACRONOTUS),
+              
+              blacktip.df = extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.LIMBATUS),
+              
+              bull.df = extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.LEUCAS),
+              
+              sandbar.df = extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.PLUMBEUS),
+              
+              sharpnose.df = extract.taxa.df.fun(eff2,
+                                     eff2$RHIZOPRIONODON.TERRAENOVAE),
+              
+              silky.df = extract.taxa.df.fun(eff2,
+                                     eff2$CARCHARHINUS.FALCIFORMIS),
+              
+              spinner.df = extract.taxa.df.fun(eff2,
+                                    eff2$CARCHARHINUS.BREVIPINNA),
+              
+              tiger.df = extract.taxa.df.fun(eff2,
+                                     eff2$GALEOCERDO.CUVIER))
+```
+
+```{r New Scatterplots of cleaned data, cache=TRUE}
+
+scatter_fn(sp.df)
+```
+
+
+
+
+```{r Load cleaned data into nice species list sp.df, include=FALSE}
+sp.df <- list(blacknose = blacknose,
+              blacktip = blacktip,
+              bull = bull,
+              sandbar = sandbar,
+              sharpnose = sharpnose,
+              silky = silky,
+              spinner = spinner,
+              tiger = tiger)
+```
+
+### Quick Look at data
+```{r, cache=TRUE}
+df.summary <- list(bn =  summary(sp.df[[1]]),
+                   bt = summary(sp.df[[2]]),
+                   bu = summary(sp.df[[3]]),
+                   sb = summary(sp.df[[4]]),
+                   sn = summary(sp.df[[5]]),
+                   si = summary(sp.df[[6]]),
+                   sp = summary(sp.df[[7]]),
+                   ti = summary(sp.df[[8]]))
+df.summary$bn
+
+df.summary$bt
+
+df.summary$bu
+
+df.summary$sb
+
+
+df.summary$sn
+
+df.summary$si
+
+df.summary$sp
+
+df.summary$ti
+
+
+
+
+```
+
+
+
+## Model Development ##
+
+
+###  Response Variable Transformations
+
+I want to see if Logging *cpe* will make it more normally distributed. Keep in mind cpe will only include positive catch as a response variable so I'll have to remove all zeroe cpes. Then I will move on to the explanatory variables.
+
+##### Removing zero CPUE
+
+```{r}
+
+length(sp.df[[1]]$cpe)
+
+for(i in 1:length(sp.df)){
+  sp.df[[i]] %<>% subset(cpe > 0)
+}
+
+
+length(sp.df[[1]]$cpe)
+```
+
+
+#### Histograms of CPUE All Species
+
+```{r Histograms of variables, cache=TRUE, fig.height=24, fig.width=10}
+
+par(mfrow = c(1,1))
+par(mfrow = c(4,2))
+
+
+for(i in 1:length(sp.df)){
+    
+    hist(sp.df[[i]]$cpe,
+         freq=FALSE,
+         main = names(sp.df[i]))
+    
+  }
+```
+
+
+
+##### log cpe
+```{r, cache=TRUE, fig.height=24, fig.width=10}
+
+
+
+par(mfrow = c(1,1))
+
+par(mfrow = c(4,2))
+
+for(i in 1:length(sp.df)){
+    
+    hist(log(sp.df[[i]]$cpe),
+         freq=FALSE,
+         main = names(sp.df[i]))
+    
+  }
+```
+##### log cpe +1
+
+```{r, cache=TRUE, fig.height=24, fig.width=10}
+par(mfrow = c(4,2))
+
+for(i in 1:length(sp.df)){
+    
+    hist(log(sp.df[[i]]$cpe +1),
+         freq=FALSE,
+         main = names(sp.df[i]))
+    
+  }
+```
+##### log cpe + 0.1
+
+```{r, cache=TRUE, fig.height=24, fig.width=10}
+par(mfrow = c(4,2))
+
+for(i in 1:length(sp.df)){
+    
+    hist(log(sp.df[[i]]$cpe +0.1),
+         freq=FALSE,
+         main = names(sp.df[i]))
+    
+  }
+```
+
+##### Mean centered cpe
+```{r, cache=TRUE, fig.height=24, fig.width=10}
+par(mfrow = c(4,2))
+
+for(i in 1:length(sp.df)){
+    
+    hist((sp.df[[i]]$cpe- mean(sp.df[[i]]$cpe)),
+         freq=FALSE,
+         main = names(sp.df[i]))
+    
+  }
+
+```
+
+##### Standardized cpe
+```{r, cache=TRUE, fig.height=24, fig.width=10}
+par(mfrow = c(4,2))
+
+for(i in 1:length(sp.df)){
+    
+    hist(((sp.df[[i]]$cpe- mean(sp.df[[i]]$cpe))/sd(sp.df[[i]]$cpe)),
+         freq=FALSE,
+         main = names(sp.df[i]))
+    
+  }
+
+```
+
+
+It looks like the best treatment for the response variable should be the log of the CPUE.
+
+$$g_{1}(y) = log(CPUE)$$
+
+
+### Explanatory variable transformations
+
+It may be important to loog at the variables both with and without 0 CPUE values since I will be removing the zeroes for the second strata model.
+
+
+#### With Zeros Strata 1
+```{r load sp.df with zeroes, include=FALSE}
+sp.df_All <- list(blacknose = blacknose,
+              blacktip = blacktip,
+              bull = bull,
+              sandbar = sandbar,
+              sharpnose = sharpnose,
+              silky = silky,
+              spinner = spinner,
+              tiger = tiger)
+```
+
+```{r Hist of Explanatory variables With Zeros, cache=TRUE, fig.height=24, fig.width=10}
+var_hist_all <- sp.df_All[[1]]
+  
+var_hist_all %<>%
+  select("AVG.DEPTH", "TEMPBOTM", "TURBBOTM", "OXYBOTM", "SALBOTM")
+
+
+par(mfrow = c(3,2))  
+  
+for(i in 1:length(var_hist_all)){
+  hist(var_hist_all[[i]],
+       freq = FALSE,
+       main = names(var_hist_all[i]))
+}
+
+```
+
+Looks like **AVG.DEPTH** is a clear canidate for transformation. Other possible canidates **SALBOTM**, **TEMPBOTM**, **TURBBOTM**. 
+
+```{r hist depth}
+par(mfrow = c(1,1)) 
+
+
+hist(var_hist_all$AVG.DEPTH)
+
+```
+
+##### Log AVG.DEPTH
+```{r hist log depth}
+hist(log(var_hist_all$AVG.DEPTH))
+
+```
+
+##### square root AVG.DEPTH
+```{r hist sqrt depth}
+
+hist(sqrt(var_hist_all$AVG.DEPTH))
+
+```
+
+##### 4th root AVG.DEPTH
+```{r hist 4th root depth}
+
+hist((var_hist_all$AVG.DEPTH)^0.25)
+
+```
+
+The 4th root of **AVG.DEPTH** looks the best to me but lets leave this for now to see if it actually improves the model fit later.
+
+
+
+#### No Zeros Strata2
+
+
+
+```{r Hist of Explanatory variables, cache=TRUE, fig.height=24, fig.width=10}
+var_hist <- sp.df$sharpnose
+  
+var_hist %<>%
+  select("AVG.DEPTH", "TEMPBOTM", "TURBBOTM", "OXYBOTM", "SALBOTM")
+
+
+par(mfrow = c(3,2))  
+  
+for(i in 1:length(var_hist)){
+  hist(var_hist[[i]],
+       freq = FALSE,
+       main = names(var_hist[i]))
+}
+
+var_hist$
+  
+
+
+```
+
+The response variables look pretty ok to me. possible canidates are **AVG.DEPTH**, **TEMPBOTM**, **TURBBOTM**, and **SALBOTM**.
+
+I'm going to leave these alone for now and see how the models come out.
+
+
+
+```{r DEPTH}
+par(mfrow = c(1,1))
+
+hist(var_hist$AVG.DEPTH)
+
+
+hist((var_hist$AVG.DEPTH)^0.25)
+
+```
+
+
+```{r SALBOTM}
+hist(log(var_hist$SALBOTM))
+
+
+
+
+```
+
+
+
+
+
+
+### Colnearity among Explanatory Variables
+
+```{r}
+str(sp.df$sharpnose)
+
+cor_Mat <- sp.df$sharpnose
+
+cor_Mat$ROOT.DEPTH <- (cor_Mat$AVG.DEPTH)^0.25
+
+cor_Mat %<>% select("cpe", "STARTLAT", "STARTLON", "AVG.DEPTH", "ROOT.DEPTH", "TEMPBOTM", "TURBBOTM", "OXYBOTM", "SALBOTM") %>%
+  cor(use = "pairwise.complete.obs")
+
+cor_Mat
+
+
+```
+
+
+Looks like *AVG.DEPTH* and *TEMPBOTM* are strongly correlated as are *ROOT.DEPTH* and *TEMPBOTM*.
+
+
+### AIC Check
+
+
+I need to see if increasing the number of basis dimensions (k) affects the AIC score. I think it will because for each k within a spline one additional knot or $\beta$ is created and these are accounted for in the maximum degrees of freedom, which, is accounted for in the calculation of AIC.
+
+$$ AIC = 2K - 2ln(\hat{L}) $$
+ Where $K$ is the number of parameters and $\hat{L}$ is the maximum value of the liklihood function of the model.
+
+
+
+```{r AIC Check, cache=TRUE}
+### Fit a simple GAM with default k values
+
+AIC_1 <- gam((cpe + 1) ~ s(STARTLON, STARTLAT) +
+               s(SALBOTM),
+             family = Gamma(link=log),
+             data = sharpnose)
+
+par(mfrow=c(2,2))
+gam.check(AIC_1) ### both k-values seem like they could be increased especially Lat Lon
+
+
+### Now fit gam with elevated k-value
+
+AIC_2 <- gam((cpe + 1) ~ s(STARTLON, STARTLAT, k = 200) +
+               s(SALBOTM,
+                 k = 60),
+             family = Gamma(link=log),
+             data = sharpnose)
+
+gam.check(AIC_2)
+
+AIC(AIC_1, AIC_2)
+
+AIC_1$aic
+AIC_2$aic
+
+```
+
+ Looks like the higher the basis dimensions (k) the lower the AIC score. This makes sense since the basis dimensions are factored into the total degrees of freedom which affects the AIC score.
+
+
+Lets see if adding a $\gamma$ of 1.4 will resolve the difference. This essentially adds an additional penalty to each degree of freedom to prevent overfitting.
+
+```{r Gamma AIC Check, cache=TRUE}
+AIC_3 <- gam((cpe + 1) ~ s(STARTLON, STARTLAT) +
+               s(SALBOTM),
+             family = Gamma(link=log),
+             gamma=1.4,
+             data = sharpnose)
+
+
+gam.check(AIC_3) ### both k-values seem like they could be increased especially Lat Lon
+
+
+### Now fit gam with elevated k-value
+
+AIC_4 <- gam((cpe + 1) ~ s(STARTLON, STARTLAT, k = 200) +
+               s(SALBOTM,
+                 k = 60),
+             family = Gamma(link=log),
+             gamma=1.4,
+             data = sharpnose)
+
+gam.check(AIC_4)
+
+
+
+
+AIC(AIC_1, AIC_3, AIC_2, AIC_4)
+```
+
+
+
+
+### Choosing Basis Dimensions k
+
+I simply need to specify a high enough k that the model is addequatly flexible to fit the data. Since i'm using TPRS, which does are knot free bases, this should be easier.
+
+
+```{r}
+
+
+sn.pos <- sp.df$sharpnose[sp.df$sharpnose$cpe > 0,]
+
+str(sn.pos)
+### Vs AVG.DEPTH and ROOT.DEPTH
+
+gm1 <- gam((cpe +1) ~ s(STARTLAT) + s(STARTLON) + s(AVG.DEPTH) + s(TEMPBOTM) + s(TURBBOTM) + s(OXYBOTM) + s(SALBOTM) + s(YEAR, bs = "re"),
+           data = sn.pos,
+           family = Gamma(link = log))
+
+par(mfrow = c(2,2))
+gam.check(gm1)
+plot(gm1)
+
+summary(gm1)
+
+gm1.b <- gam((cpe +1) ~ s(STARTLAT) + s(STARTLON) + s(ROOT.DEPTH) + s(TEMPBOTM) + s(TURBBOTM) + s(OXYBOTM) + s(SALBOTM) + s(YEAR, bs = "re"),
+           data = sn.pos,
+           family = Gamma(link = log))
+
+gam.check(gm1.b)
+plot(gm1.b)
+
+summary(gm1.b)
+
+AIC (gm1, gm1.b)
+
+### Vs s(LAT,LON)
+
+gm2 <- gam((cpe +1) ~ s(STARTLON, STARTLAT,) + s(ROOT.DEPTH) + s(TEMPBOTM) + s(TURBBOTM) + s(OXYBOTM) + s(SALBOTM) + s(YEAR, bs = "re"),
+           data = sn.pos,
+           family = Gamma(link = log))
+
+gam.check(gm2)
+plot(gm2)
+
+summary(gm2)
+
+AIC (gm1, gm1.b, gm2)
+
+anova(gm1, gm1.b, gm2, test = "F")
+
+
+### Vs ti(LAT) + ti(LON) + ti(LAT,LON)
+gm3 <- gam((cpe +1) ~ ti(STARTLAT) + ti(STARTLON) + ti(STARTLON, STARTLAT,) + s(ROOT.DEPTH) + s(TEMPBOTM) + s(TURBBOTM) + s(OXYBOTM) + s(SALBOTM) + s(YEAR, bs = "re"),
+           data = sn.pos,
+           family = Gamma(link = log))
+
+gam.check(gm3)
+plot(gm3)
+
+summary(gm3)
+
+AIC (gm1, gm1.b, gm2, gm3)
+
+anova(gm1, gm1.b, gm2, gm3, test = "F")
+```
+
+Looks Like using the combined smooth for LAT and LON is better. and the combined additive and interaction tensor product smooth is worse than the isotrophic TPRS smooth.
+
+Lets start playing with k values
+
+```{r}
+
+sn.pos <- sp.df$sharpnose[sp.df$sharpnose$cpe > 0,]
+
+str(sn.pos)
+
+gm4 <- gam((cpe +1) ~ s(STARTLON, STARTLAT, k = 5) + s(ROOT.DEPTH, k = 5) + s(TEMPBOTM, k = 5) + s(TURBBOTM, k = 5) + s(OXYBOTM, k = 5) + s(SALBOTM, k = 5) + s(YEAR, bs = "re"),
+           data = sn.pos,
+           family = Gamma(link = log))
+
+gam.check(gm4)
+plot(gm4)
+
+summary(gm4)
+
+AIC (gm2, gm4)
+
+anova(gm2, gm4, test = "F")
+```
+
+
+Looks like I should increase k for s(LAT, LON) and potentially s(OXYBOTM), s(TEMPBOTM), and s(ROOT.DEPTH).
+
+
+```{r}
+gm5.0 <- gam((cpe +1) ~ s(STARTLON, STARTLAT, k = 60) + s(I(AVG.DEPTH^0.25), k = 5) + s(TEMPBOTM, k = 5) + s(TURBBOTM, k = 5) + s(OXYBOTM, k = 5) + s(SALBOTM, k = 5) + s(YEAR, bs = "re"),
+           data = sn.pos,
+           family = Gamma(link = log))
+
+par(mfrow = c(2,2))
+gam.check(gm5.0)
+
+gm5.1 <- gam((cpe +1) ~ s(STARTLON, STARTLAT, k = 60) + s(I(AVG.DEPTH^0.25), k = 10) + s(TEMPBOTM, k = 10) + s(TURBBOTM, k = 5) + s(OXYBOTM, k = 5) + s(SALBOTM, k = 5) + s(YEAR, bs = "re"),
+           data = sn.pos,
+           family = Gamma(link = log))
+
+par(mfrow = c(2,2))
+gam.check(gm5.1)
+
+gm5.2 <- gam((cpe +1) ~ s(STARTLON, STARTLAT, k = 60) + s(I(AVG.DEPTH^0.25), k = 10) + s(TEMPBOTM, k = 10) + s(TURBBOTM, k = 5) + s(OXYBOTM, k = 10) + s(SALBOTM, k = 5) + s(YEAR, bs = "re"),
+           data = sn.pos,
+           family = Gamma(link = log))
+
+par(mfrow = c(2,2))
+gam.check(gm5.2)
+
+
+##############
+
+
+gm5 <- gam((cpe +1) ~ s(STARTLON, STARTLAT, k = 60) + s(I(AVG.DEPTH^0.25), k = 10) + s(TEMPBOTM, k = 10) + s(TURBBOTM, k = 5) + s(OXYBOTM, k = 5) + s(SALBOTM, k = 5) + s(YEAR, bs = "re"),
+           data = sn.pos,
+           family = Gamma(link = log))
+
+par(mfrow = c(2,2))
+gam.check(gm5)
+
+par(mfrow = c(1,1))
+plot(gm5)
+
+summary(gm5)
+
+AIC (gm2, gm4, gm5)
+
+anova(gm2, gm4, gm5, test = "F")
+```
+
+It looks like just increasing the k for the Lat Lon smooth improved the model fit. by starting with a k = 5 for all smooths and doubling those where edf was close to k` and/or p was significant I ended up with a K = 80 for s(LON,LAT), 10 s(ROOT.DEPTH), 10 s(TEMPBOTM), 5 s(TURBBOTM), 15 s(OXYBOTM), 5 s(SALBOTM).
+
+```{r}
+gm5.0 <- gam((cpe +1) ~ s(STARTLON, STARTLAT, k = 60) + s(I(AVG.DEPTH^0.25), k = 5) + s(TEMPBOTM, k = 5) + s(TURBBOTM, k = 5) + s(OXYBOTM, k = 5) + s(SALBOTM, k = 5) + 
+               s(Dis.to.SHORE, k = 5) + s(YEAR, bs = "re"),
+           data = sn.pos,
+           family = Gamma(link = log))
+
+par(mfrow = c(2,2))
+gam.check(gm5.0)
+
+### 5.1
+gm5.1 <- gam((cpe +1) ~ s(STARTLON, STARTLAT, k = 60) + s(I(AVG.DEPTH^0.25), k = 10) + s(TEMPBOTM, k = 10) + s(TURBBOTM, k = 5) + s(OXYBOTM, k = 5) + s(SALBOTM, k = 5) + 
+               s(Dis.to.SHORE, k = 5) + s(YEAR, bs = "re"),
+           data = sn.pos,
+           family = Gamma(link = log))
+
+par(mfrow = c(2,2))
+gam.check(gm5.1)
+
+
+
+```
+
+
+
+
+
+## GAM Fits ## 
+
+
+## GAM Output ## 
+
+
+## Functions ## 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
