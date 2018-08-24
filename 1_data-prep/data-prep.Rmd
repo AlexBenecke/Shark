@@ -8,8 +8,8 @@ output:
     toc: true
     toc_float: true
     toc_depth: 4
-    fig_width: 8
-    fig_height: 6
+    fig_width: 10
+    fig_height: 8
 editor_options: 
   chunk_output_type: console
 ---
@@ -29,7 +29,7 @@ source("5_functions/dropbox_fn.R") # For interacting with dropbox
 proj = "shark" # Specify project where data is stored 
 output_data_prep <- path_get(proj, "output/output_data_prep")
 
-source("5_functions/taxa-function.R")
+#source("5_functions/taxa-function.R") # DEFUNKT
 ```
 
 ## Data Exploration ##
@@ -40,43 +40,45 @@ source("5_functions/taxa-function.R")
 ## Creating New Variables ##
 
 ```{r Load CPUE data}
-eff <- read_csv_fn(proj, "data/raw-data/CPUE.csv", na.strings = "") %>%
-  arrange(YEAR,GOM_AREA,END_GMT)
+eff <- read_csv_fn( "data/raw-data/CPUE.csv", proj) %>%
+  arrange(year)
 
 str(eff)
 headtail(eff)
 ```
 
 
-### AVG.DEPTH
+### Startdepth instead of AVG.DEPTH
 
 ```{r Create AVG.DEPTH}
 ### Find STARTDEPTH and ENDDEPTH Variables
 
-head(eff[,c(8,12)])
+head(eff[,"startdepth"])
 
 ### Average STARTDEPTH and ENDDEPTH and save as AVG.DEPTH
 
-eff$AVG.DEPTH <- apply(eff[,c(8,12)], 1, FUN=mean) 
+#eff$AVG.DEPTH <- apply(eff[,c(8,12)], 1, FUN=mean) 
 
-range(eff$AVG.DEPTH, na.rm = TRUE)
+#range(eff$AVG.DEPTH, na.rm = TRUE)
 ```
 
 ### Month
 ```{r Create Month Variable }
 
-head(eff$START_GMT)
+head(eff$start_gmt)
 
-str(eff$START_GMT)
+str(eff$start_gmt)
 ### Format START_GMT as Date
 
-eff$START_GMT <- strptime(eff$START_GMT, format = "%m/%d/%Y")
+eff$start_gmt <- strptime(eff$start_gmt, format = "%m/%d/%Y")
 
-str(eff$START_GMT)
+str(eff$start_gmt)
 
-eff$MONTH <- format.Date(eff$START_GMT, format = "%m")
+eff$month <- format.Date(eff$start_gmt, format = "%b")
 
-str(eff$MONTH)
+str(eff$month)
+
+unique(eff$month)
 ```
 
 
@@ -95,8 +97,8 @@ require(doSNOW)    # for resisterDoSNOW(...)
 
 
 ```{r Distance to Shore Variable, eval=FALSE}
-eff$Long <- eff$STARTLON
-eff$Lat <- eff$STARTLAT
+eff$Long <- eff$startlon
+eff$Lat <- eff$startlat
 
 head(eff)
 str(eff)
@@ -128,7 +130,10 @@ eff$Dis.to.SHORE <- get.dist.parallel(length(sp.points))
 eff$Dis.to.SHORE <- eff$Dis.to.SHORE/1000
 
 head(eff)
+tail(eff)
 str(eff)
+
+stopCluster(cl)
 ```
 
 
@@ -149,35 +154,134 @@ sp::plot(gulf.shape, add= T,
 ```
 
 
-### Create Presence Abscence Variable
+### Create Species, Sex, Maturity, and common name variables
 
-This has been put inside the extract taxa finction (`taxa-fn.R`).
+
+```{r Create Species Sex and Maturity columns, eval=FALSE}
+
+###write.csv(eff,file = "eff.csv", row.names = FALSE)
+#eff <- read.csv("eff.csv") ### bring in eff.csv
+
+str(eff)
+
+
+  red.df <- eff %>% ### create reduced data frame
+    select(year, month, startlat, startlon, start_gmt, 
+           startdepth, tempbotm, fluorobotm, turbbotm, 
+           oxybotm, salbotm, bottype4, Dis.to.SHORE, TAXON, CPUE,Adj.CPUE)
+  
+str(red.df)
+tail(red.df)
+
+
+red.df$TAXON <- as.character(red.df$TAXON) ### make TAXON variable character so it can be supplied to strsplit()
+
+split_TAXON <- strsplit(red.df$TAXON, "_4_") ### split TAXON variable in tspecies and Sex Maturity segments seperated by _4_
+
+    ### Check everything is good
+
+split_TAXON[[1]][2]
+red.df$TAXON[1]
+
+split_TAXON[[5]][2]
+red.df$TAXON[5]
+
+split_TAXON[[1]][1]
+
+
+str(split_TAXON)
+
+### Create empty species vector
+species <- numeric(length(split_TAXON))
+
+for(i in 1:length(split_TAXON)){
+  
+  species[i] <- split_TAXON[[i]][1] ### fill in empty species vector with species from first component of split_TAXON list
+  
+  split_TAXON[[i]] <- split_TAXON[[i]][2] ### create a new list with just Sex and Maturity
+  
+}
+
+### make split_TAXON list a vector so it can be supplied to strsplt()
+split_TAXON_vec <- unlist(split_TAXON)
+
+### separate Sex and Maturity
+split_sex_mat <- strsplit(split_TAXON_vec, split = "")
+
+str(split_sex_mat)
+
+
+### create emplty sex and maturity vectors
+sex <- numeric(length(split_sex_mat))
+
+maturity <- numeric(length(split_sex_mat))
+
+### fill in sex and maturity
+for(i in 1:length(split_sex_mat)){
+  
+  sex[i] <- unlist(split_sex_mat[[i]][1])
+
+  maturity[i] <- unlist(split_sex_mat[[i]][2])
+  
+}
+### check everything is good
+head(sex)
+head(maturity)
+head(red.df$TAXON)
+
+
+### add species, sex, and maturity variables to red.df
+red.df$species <- species
+red.df$sex <- sex 
+red.df$maturity <- maturity
+
+### check
+str(red.df)
+tail(red.df) ### good
+
+
+### rename species with common names
+
+unique(red.df$species) %>% sort() ### interesting only 7 species
+### No silky this makes sense
+
+red.df$common <- numeric(nrow(red.df))
+
+
+for(i in 1:nrow(red.df)){
+  
+  if( red.df$species[i] == "C_ACR" ){ red.df$common[i] <- "Blacknose" }
+  if( red.df$species[i] == "C_BRE" ){ red.df$common[i] <- "Spinner" }
+  if( red.df$species[i] == "C_LEU" ){ red.df$common[i] <- "Bull" }
+  if( red.df$species[i] == "C_LIM" ){ red.df$common[i] <- "Blacktip" }
+  if( red.df$species[i] == "C_PLU" ){ red.df$common[i] <- "Sandbar" }
+  if( red.df$species[i] == "G_CUV" ){ red.df$common[i] <- "Tiger" }
+  if( red.df$species[i] == "R_TER" ){ red.df$common[i] <- "Sharpnose" }
+  
+}
+
+
+
+
+### check
+str(red.df)
+tail(red.df)
+
+```
+
+### Create Presence Absence Variable
 
 ```{r Create pres variable, eval=FALSE}
-extract_taxa_fn <- function(data.in = x,
-                                tax.id = y) {
-  
-  red.df <- data.in %>%
-    select(YEAR, MONTH, STARTLAT, STARTLON, START_GMT, ENDLAT, ENDLON, 
-           STARTDEPTH, ENDDEPTH, AVG.DEPTH, TEMPBOTM, FLUOROBOTM, TURBBOTM, 
-           OXYBOTM, SALBOTM, dombot8, dombot4, Dis.to.SHORE)
-  
-  red.df <- cbind(red.df, cpe = tax.id) 
-  
-  pos.ind <- which(red.df$cpe >= 0)   ### be sure no negatives
-  red.df <- red.df[pos.ind,]
-  
-  ### Create presence absence variable
-  
-  red.df$pres <- numeric(nrow(red.df))
-  
-  for(i in 1:nrow(red.df)){
+### Add presence absence variable
+red.df$pres <- numeric(nrow(red.df))
+
+for(i in 1:nrow(red.df)){
     
-    if(red.df$cpe[i] > 0){
+    if(red.df$CPUE[i] > 0){
       
       red.df$pres[i] <- 1
       
-    } else if(red.df$cpe[i] == 0){
+    } else if(red.df$CPUE[i] == 0){
       
       red.df$pres[i] <- 0
       
@@ -186,23 +290,21 @@ extract_taxa_fn <- function(data.in = x,
       red.df$pres[i] <- "NA"
       
     }
-  }
-  
-  
-  red.df %<>% select(cpe, pres, DATE = START_GMT, YEAR, MONTH, STARTLAT:STARTLON, ENDLAT:ENDLON, 
-                     STARTDEPTH, ENDDEPTH, AVG.DEPTH, TEMPBOTM:dombot4, Dis.to.SHORE)
-  
-  
-  return(reduced.df = red.df)
 }
+
+### check
+str(red.df)
+tail(red.df)
+
+
 ```
 
 
 ### Saving changes to CPUE2.csv 
 
-```{r Create CPUE2.csv, }
+```{r Create CPUE2.csv, eval=FALSE}
 
-#8-1-18#write_csv_fn(proj, eff, file = "data/raw-data/CPUE2.csv", row.names = FALSE)
+#8-15-18#write_csv_fn( red.df, file = "data/raw-data/CPUE2.csv", row.names = FALSE, proj)
 
 ```
 
@@ -210,362 +312,1144 @@ extract_taxa_fn <- function(data.in = x,
 ## QA/QC ##
 
 
-1. Load CPUE2.csv data, Extract CPUE for all species and save in a list called sp.df
+### 1. Load CPUE2.csv data, Extract CPUE for all species and save in a list called sp.df
 
-```{r Load Data}
-source("5_functions/taxa-function.R")
 
-eff2 <- read_csv_fn(proj, "data/raw-data/CPUE2.csv") 
+```{r Load eff2 data, }
+
+eff2 <- read_csv_fn( "data/raw-data/CPUE2.csv", proj)
 
 str(eff2)
+headtail(eff2)
 
-sp.df <- list(blacknose =  extract_taxa_fn(eff2,
-                                   eff2$CARCHARHINUS.ACRONOTUS),
-              
-              blacktip = extract_taxa_fn(eff2,
-                                     eff2$CARCHARHINUS.LIMBATUS),
-              
-              bull = extract_taxa_fn(eff2,
-                                     eff2$CARCHARHINUS.LEUCAS),
-              
-              sandbar = extract_taxa_fn(eff2,
-                                     eff2$CARCHARHINUS.PLUMBEUS),
-              
-              sharpnose = extract_taxa_fn(eff2,
-                                     eff2$RHIZOPRIONODON.TERRAENOVAE),
-              
-              silky = extract_taxa_fn(eff2,
-                                     eff2$CARCHARHINUS.FALCIFORMIS),
-              
-              spinner = extract_taxa_fn(eff2,
-                                    eff2$CARCHARHINUS.BREVIPINNA),
-              
-              tiger = extract_taxa_fn(eff2,
-                                     eff2$GALEOCERDO.CUVIER))
+Species_Vec <- levels(eff2$common)
 
-str(sp.df$sharpnose)
-head(sp.df$sharpnose)
+
+sp.lst <- list(blacknose =  subset(eff2, common == Species_Vec[1]),
+              
+              blacktip = subset(eff2, common == Species_Vec[2]),
+              
+              bull = subset(eff2, common == Species_Vec[3]),
+              
+              sandbar = subset(eff2, common == Species_Vec[4]),
+              
+              sharpnose = subset(eff2, common == Species_Vec[5]),
+              
+              spinner = subset(eff2, common == Species_Vec[6]),
+              
+              tiger = subset(eff2, common == Species_Vec[7]))
+
+str(sp.lst[[1]])
+head(sp.lst[[5]])
+
+
 ```
 
-2. Plot CPUE for all Species vs all Explanatory variables
 
-```{r Plot cpe vs all vars, echo = FALSE}
-for(i in 1:length(sp.df)){
+### 2. Plot CPUE for all Species vs all Explanatory variables
+
+
+```{r Plot CPUE vs all Variables, echo=FALSE}
+
+for(i in 1:length(sp.lst)){
   
   oldpar <- par(mfrow=c(3,4), mar=c(5,4,2,1), oma=c(1,0,3,1))
   
-  plot(cpe~YEAR,
-       data = sp.df[[i]])
+  plot(CPUE ~ year,
+       data = sp.lst[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$YEAR, sp.df[[i]]$cpe)),
+               round(cor(sp.lst[[i]]$year,
+                         sp.lst[[i]]$CPUE ),
+                     3) ),
         side=3,line=0)
   
-  plot(cpe~MONTH,
-       data = sp.df[[i]])
-  
-  plot(cpe~AVG.DEPTH,
-       data = sp.df[[i]])
+  plot(CPUE ~ startdepth,
+       data = sp.lst[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$AVG.DEPTH, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(sp.lst[[i]]$startdepth,
+                         sp.lst[[i]]$CPUE,
+                         use = "complete.obs"),
+                     3)),
         side=3,line=0)
   
-  plot(cpe~SALBOTM,
-       data = sp.df[[i]])
+  plot(CPUE ~ salbotm,
+       data = sp.lst[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$SALBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(sp.lst[[i]]$salbotm,
+                         sp.lst[[i]]$CPUE, 
+                         use = "complete.obs"),
+                     3)),
         side=3,line=0)
   
-  plot(cpe~TEMPBOTM,
-       data = sp.df[[i]])
+  plot(CPUE ~ tempbotm,
+       data = sp.lst[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$TEMPBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(sp.lst[[i]]$tempbotm,
+                         sp.lst[[i]]$CPUE, 
+                         use = "complete.obs"),
+                     3)),
         side=3,line=0)
   
-  plot(cpe~FLUOROBOTM,
-       data = sp.df[[i]])
+  plot(CPUE ~ fluorobotm,
+       data = sp.lst[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$FLUOROBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(sp.lst[[i]]$fluorobotm, 
+                         sp.lst[[i]]$CPUE, 
+                         use = "complete.obs"),
+                     3)),
         side=3,line=0)
   
-  plot(cpe~TURBBOTM,
-       data = sp.df[[i]])
+  plot(CPUE ~ turbbotm,
+       data = sp.lst[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$TURBBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(sp.lst[[i]]$turbbotm,
+                         sp.lst[[i]]$CPUE, 
+                         use = "complete.obs"),
+                     3)),
         side=3,line=0)
   
-  plot(cpe~OXYBOTM,
-       data = sp.df[[i]])
+  plot(CPUE ~ oxybotm,
+       data = sp.lst[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$OXYBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(sp.lst[[i]]$oxybotm,
+                         sp.lst[[i]]$CPUE, 
+                         use = "complete.obs"),
+                     3) ),
         side=3,line=0)
   
-  plot(cpe~dombot8,
-       data = sp.df[[i]],
+  plot(CPUE ~ bottype4,
+       data = sp.lst[[i]],
        xlab="", las=2)
   
-  plot(cpe~Dis.to.SHORE,
-       data = sp.df[[i]],
+  plot(CPUE ~ Dis.to.SHORE,
+       data = sp.lst[[i]],
        las=2)
     mtext(paste0("r = ",
-               cor(sp.df[[i]]$Dis.to.SHORE, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(sp.lst[[i]]$Dis.to.SHORE,
+                         sp.lst[[i]]$CPUE,
+                         use = "complete.obs"),
+                     3)),
         side=3,line=0)
 
-  plot(cpe~STARTLAT,
-       data = sp.df[[i]])
+  plot(CPUE ~ startlat,
+       data = sp.lst[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$STARTLAT, sp.df[[i]]$cpe)),
+               round(cor(sp.lst[[i]]$startlat,
+                         sp.lst[[i]]$CPUE ),
+                     3)),
         side=3,line=0)
   
-  plot(cpe~STARTLON,
-       data = sp.df[[i]])
+  plot(CPUE ~ startlon,
+       data = sp.lst[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$STARTLON, sp.df[[i]]$cpe)),
+               round(cor(sp.lst[[i]]$startlon,
+                         sp.lst[[i]]$CPUE ),
+                     3)),
         side=3,line=0)
   
-  mtext(names(sp.df[i]), side=3, line=0.65, outer=TRUE, cex=2, 
+  ### Add Species common name to Title
+  mtext(names(sp.lst[i]), 
+        side=3, 
+        line=0.65, 
+        outer=TRUE, 
+        cex=2, 
         font=2)
   
   par(oldpar)
 }
+
+```
+
+#### Lat Lon
+
+```{r, echo=FALSE}
+require(rgdal)   # for readOGR(...); loads package sp as well
+require(rgeos)   # for gDistance(...)
+gulf.shape <- "shape-file/Shape/stateshigh.shp"
+gulf.shape <- maptools::readShapePoly(gulf.shape)
+
+### Lat Lon
+for(i in 1:length(sp.lst)){
+    oldpar <- par(mfrow=c(2,2), mar=c(5,4,2,1), oma=c(1,0,3,1))
+    
+  plot(startlat ~ startlon, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "A" & sp.lst[[i]]$pres ==1,],
+         xlim = c(-97.5, -80.7), ylim = c(25, 30.5),
+       main = "Female Adult" )
+  
+  sp::plot(gulf.shape, add= T,
+         xlim = c(-97.5, -80.7), ylim = c(25, 30.5),
+         col = "gray")
+  
+  
+  plot(startlat ~ startlon, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "J" & sp.lst[[i]]$pres ==1,],
+         xlim = c(-97.5, -80.7), ylim = c(25, 30.5),
+       main = "Female Juvenile" )
+  
+  sp::plot(gulf.shape, add= T,
+         xlim = c(-97.5, -80.7), ylim = c(25, 30.5),
+         col = "gray")
+  
+  
+  plot(startlat ~ startlon, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "A" & sp.lst[[i]]$pres ==1,],
+         xlim = c(-97.5, -80.7), ylim = c(25, 30.5),
+       main = "Male Adult" )
+  
+  sp::plot(gulf.shape, add= T,
+         xlim = c(-97.5, -80.7), ylim = c(25, 30.5),
+         col = "gray")
+  
+  
+  plot(startlat ~ startlon, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "J" & sp.lst[[i]]$pres ==1,],
+         xlim = c(-97.5, -80.7), ylim = c(25, 30.5),
+       main = "Male Juvenile")
+  
+  sp::plot(gulf.shape, add= T,
+         xlim = c(-97.5, -80.7), ylim = c(25, 30.5),
+         col = "gray")
+  
+ 
+    mtext(names(sp.lst[i]), 
+        side=3, 
+        line=0.65, 
+        outer=TRUE, 
+        cex=2, 
+        font=2)
+ par(oldpar)
+    
+}
+```
+
+#### Temp
+
+```{r, echo=FALSE}
+### Temp
+for(i in 1:length(sp.lst)){
+    oldpar <- par(mfrow=c(2,2), mar=c(5,4,2,1), oma=c(1,0,3,1))
+    
+  plot(CPUE ~ tempbotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "A",],
+       main = "Female Adult" )
+  plot(CPUE ~ tempbotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "J",],
+       main = "Female Juvenile" )
+  plot(CPUE ~ tempbotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "A",],
+       main = "Male Adult" )
+  plot(CPUE ~ tempbotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "J",],
+       main = "Male Juvenile")
+ 
+    mtext(names(sp.lst[i]), 
+        side=3, 
+        line=0.65, 
+        outer=TRUE, 
+        cex=2, 
+        font=2)
+ par(oldpar)
+    
+}
+```
+
+#### Fluorobotm
+
+```{r, echo=FALSE}
+### Fluorobotm
+
+for(i in 1:length(sp.lst)){
+    oldpar <- par(mfrow=c(2,2), mar=c(5,4,2,1), oma=c(1,0,3,1))
+    
+  plot(CPUE ~ fluorobotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "A",],
+       main = "Female Adult" )
+  plot(CPUE ~ fluorobotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "J",],
+       main = "Female Juvenile" )
+  plot(CPUE ~ fluorobotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "A",],
+       main = "Male Adult" )
+  plot(CPUE ~ fluorobotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "J",],
+       main = "Male Juvenile")
+ 
+    mtext(names(sp.lst[i]), 
+        side=3, 
+        line=0.65, 
+        outer=TRUE, 
+        cex=2, 
+        font=2)
+ par(oldpar)
+    
+}
+```
+
+#### Turbidity
+
+```{r, echo=FALSE}
+###turbbotm
+for(i in 1:length(sp.lst)){
+    oldpar <- par(mfrow=c(2,2), mar=c(5,4,2,1), oma=c(1,0,3,1))
+    
+  plot(CPUE ~ turbbotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "A",],
+       main = "Female Adult" )
+  plot(CPUE ~ turbbotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "J",],
+       main = "Female Juvenile" )
+  plot(CPUE ~ turbbotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "A",],
+       main = "Male Adult" )
+  plot(CPUE ~ turbbotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "J",],
+       main = "Male Juvenile")
+ 
+    mtext(names(sp.lst[i]), 
+        side=3, 
+        line=0.65, 
+        outer=TRUE, 
+        cex=2, 
+        font=2)
+ par(oldpar)
+    
+}
+```
+
+#### Oxybotm
+
+```{r, echo=FALSE}
+### oxybotm
+for(i in 1:length(sp.lst)){
+    oldpar <- par(mfrow=c(2,2), mar=c(5,4,2,1), oma=c(1,0,3,1))
+    
+  plot(CPUE ~ oxybotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "A",],
+       main = "Female Adult" )
+  plot(CPUE ~ oxybotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "J",],
+       main = "Female Juvenile" )
+  plot(CPUE ~ oxybotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "A",],
+       main = "Male Adult" )
+  plot(CPUE ~ oxybotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "J",],
+       main = "Male Juvenile")
+ 
+    mtext(names(sp.lst[i]), 
+        side=3, 
+        line=0.65, 
+        outer=TRUE, 
+        cex=2, 
+        font=2)
+ par(oldpar)
+    
+}
+```
+
+#### Salinity
+
+```{r, echo=FALSE}  
+### Salinity
+for(i in 1:length(sp.lst)){
+    oldpar <- par(mfrow=c(2,2), mar=c(5,4,2,1), oma=c(1,0,3,1))
+    
+  plot(CPUE ~ salbotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "A",],
+       main = "Female Adult" )
+  plot(CPUE ~ salbotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "J",],
+       main = "Female Juvenile" )
+  plot(CPUE ~ salbotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "A",],
+       main = "Male Adult" )
+  plot(CPUE ~ salbotm, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "J",],
+       main = "Male Juvenile")
+ 
+    mtext(names(sp.lst[i]), 
+        side=3, 
+        line=0.65, 
+        outer=TRUE, 
+        cex=2, 
+        font=2)
+ par(oldpar)
+    
+}
+
+```
+
+#### Distance to shore
+
+```{r, echo=FALSE}
+### Dis.to.SHORE
+
+for(i in 1:length(sp.lst)){
+    oldpar <- par(mfrow=c(2,2), mar=c(5,4,2,1), oma=c(1,0,3,1))
+    
+  plot(CPUE ~ Dis.to.SHORE, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "A",],
+       main = "Female Adult" )
+  plot(CPUE ~ Dis.to.SHORE, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "J",],
+       main = "Female Juvenile" )
+  plot(CPUE ~ Dis.to.SHORE, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "A",],
+       main = "Male Adult" )
+  plot(CPUE ~ Dis.to.SHORE, 
+       data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "J",],
+       main = "Male Juvenile")
+ 
+    mtext(names(sp.lst[i]), 
+        side=3, 
+        line=0.65, 
+        outer=TRUE, 
+        cex=2, 
+        font=2)
+ par(oldpar)
+    
+}
+
+```
+
+**Blacknose**
+
+No *startdepth* over 100.
+*salbotm*  greater than 40 looks like 1 outlier at 0.
+
+**Blacktip**
+
+**Bull**
+
+*Dis.to.SHORE* 
+
+**Sandbar**
+
+**Sharpnose**
+
+**Spinner**
+
+Juveniles may occupy larger temperature range than adults
+
+**Tiger**
+
+ Not enough data in Adult to make separate maturity. Seems to be a lack of unique values CPUE is clustered around whole numbers.
+
+### 3. Identify outliers
+
+```{r Explanatory variable range}
+var_vec <- names(sp.lst[[1]][,c(1,3,4,6:13,15)])
+
+eff2 %>% select(var_vec) %>% summary()
+
+
+range(eff2$tempbotm, na.rm=TRUE) # 8.6 to 31.8 C
+
+range(eff2$startdepth, na.rm=TRUE)  # 9 to 375
+
+range(eff2$fluorobotm, na.rm=TRUE) # 0 to 62.8
+
+range(eff2$turbbotm, na.rm=TRUE) # 0 to 122.4
+
+range(eff2$oxybotm, na.rm=TRUE) # 0 to 10.7
+
+range(eff2$salbotm, na.rm=TRUE) # 17.9 to 48.8
+
+range(eff2$Dis.to.SHORE, na.rm=TRUE) # 2.15 to 236.5 km
+```
+
+#### Lat Lon QA/QC
+
+
+```{r Lat Lon QAQC, echo=FALSE}
+par(mfrow=c(1,1))
+plot(eff2$startlon, eff2$startlat)
+```
+All looks good here.
+
+#### Startdepth QA/AC
+```{r depth QAQC, results='hide', fig.keep='last'}
+range(eff2$startdepth, na.rm=TRUE) # 9 to 375
+
+plot(CPUE ~ startdepth,
+     data = eff2)
+
+```
+
+```{r depth Nas, eval=FALSE, echo=FALSE,results='hide',fig.keep='last'}
+(depth.NA <- which(is.na(eff2$startdepth) == TRUE))
+
+length(depth.NA)
+
+(depth.NA.percent.data <- length(depth.NA)/nrow(eff2) * 100)
+
+table(eff2$year[c(depth.NA)])
+
+hist(eff2$year[c(depth.NA)],
+     xaxt = "n",
+     labels = TRUE,
+     ylab = "number of NAs", 
+     xlab = "Year",
+     main = paste0( "startdepth NAs represent ", eval(round( length(depth.NA)/nrow(eff2) * 100 , 2)), " % of the Data"))
+
+axis(1, at = seq(2001, 2017,1))
+```
+
+  I don't think there are any outliers here. Very little positive catch past about 160 m, however, there is no way I should remove those zeros. There are no NAs in startdepth.
+
+#### Temperature QA/QC
+
+**Temp** Reasonable temps are from 50 F (10 C) in winter to 88 F (31 C) summer [https://www.nodc.noaa.gov/dsdt/cwtg/all_meanT.html]
+
+```{r Temp QAQC,results='hide',fig.keep='last'}
+unique(eff2$month, na.rm=TRUE) # July to november
+range(eff2$tempbotm, na.rm=TRUE) # 8.6 to 31.8 C
+# Range looks pretty reasonable
+
+rm.temp <- which(eff2$tempbotm < 9)
+
+par(mfrow = c(1,1))
+plot(CPUE ~ tempbotm,
+     data = eff2[-c(rm.temp),],
+     xlim = c(8,33), ylim = c(0,65),
+     pch = 19,
+     col = rgb(0,0,0, 0.15),
+     main = "",
+     bty = "n")
+
+abline(v = 9, lty = 3, col = "green")
+
+par(new = T)
+
+plot(CPUE ~ tempbotm,
+     data = eff2[c(rm.temp),],
+     xlim = c(8,33), ylim = c(0,65),
+     xaxt = "n", yaxt = "n",
+     xlab = "", ylab = "",
+     pch = 19,
+     col = rgb(1,0,0, 0.15),
+     main = paste0(expression("n = "), eval(length(rm.temp)/49)," Station(s) ", "(or " , eval(length(rm.temp)), " lines of data)"),
+     bty = "n")
+```
+
+```{r Temp Nas, echo=FALSE,results='hide',fig.keep='last'}
+(temp.NA <- which(is.na(eff2$tempbotm) == TRUE))
+
+length(temp.NA)
+
+(temp.NA.percent.data <- length(temp.NA)/nrow(eff2) * 100)
+
+table(eff2$year[c(temp.NA)])
+
+hist(eff2$year[c(temp.NA)],
+     xaxt = "n",
+     labels = TRUE,
+     ylab = "number of NAs", 
+     xlab = "Year",
+     main = paste0( "tempbotm NAs represent ", eval(round( length(temp.NA)/nrow(eff2) * 100 , 2)), " % of the Data"))
+
+axis(1, at = seq(2001, 2017,1))
 ```
 
 
-3. Identify outliers
-
-```{r QAQC}
-### QA QC
-
-par(mfrow=c(1,1))
-plot(eff2$STARTLON,eff2$STARTLAT)
+I will remove temperatures $less \ than \ 9 \ ^\circ{C}$. This comes out to be $n =$ `r length(rm.temp)/49` station(s). NAs in temp account for `r round( length(temp.NA)/nrow(eff2) * 100 , 2)` $\%$ of the data.
 
 
-summary(eff2[c(6:8,12,38:50)])
+#### Fluorobotm QA/QC
 
-#### outlier notes
+**Fluorobotom** IDK
 
-plot(eff2$SALBOTM, eff2$CARCHARHINUS.ACRONOTUS)
+```{r Fluorobotm QAQC,results='hide',fig.keep='last'}
+range(eff2$fluorobotm, na.rm=TRUE) # 0 to 62.8
+
+rm.fluo <- which(eff2$fluorobotm == 0 | eff2$fluorobotm > 26.5)
+
+par(mfrow = c(1,1))
+plot(CPUE ~ fluorobotm,
+     data = eff2[-c(rm.fluo),],
+     xlim = c(0,63), ylim = c(0,70),
+     pch = 19,
+     col = rgb(0,0,0, 0.15),
+     main = "",
+     bty = "n")
+
+abline(v = 0, lty = 3, col = "green")
+
+abline(v = 13, lty = 2, col = "red")
+
+abline(v = 20, lty = 2, col = "red")
+
+abline(v = 26.5, lty = 3, col = "green")
 
 
-range(eff2$SALBOTM, na.rm = TRUE)
+par(new = T)
 
-(rm.Sal <- which(eff2$SALBOTM > 40 | eff2$SALBOTM < 15)) ### 507  932 2705 2770 2771 2941 2979
+plot(CPUE ~ fluorobotm,
+     data = eff2[c(rm.fluo),],
+     xlim = c(8,33), ylim = c(0,65),
+     xaxt = "n", yaxt = "n",
+     xlab = "", ylab = "",
+     pch = 19,
+     col = rgb(1,0,0, 0.15),
+     main = paste0(expression("n = "), eval(length(rm.fluo)/49)," Station(s) ", "(or " , eval(length(rm.fluo)), " lines of Data)"),
+     bty = "n")
+```
 
-eff2[c(rm.Sal),c(1,42)]
+```{r Fluo NAs,results='hide',fig.keep='last'}
+(fluo.NA <- which(is.na(eff2$fluorobotm) == TRUE))
 
-#(rm.EndLon <- which(eff2$ENDLON > -80)) ### 1465 >>> just always use STARTLON and STARTLAT
+length(fluo.NA)
 
+(fluo.NA.percent.data <- length(fluo.NA)/nrow(eff2) * 100)
 
-range(eff2$OXYBOTM, na.rm = TRUE)
+table(eff2$year[c(fluo.NA)])
 
-(oxy <- which(eff2$OXYBOTM == 0))
+hist(eff2$year[c(fluo.NA)],
+     xaxt = "n",
+     labels = TRUE,
+     ylab = "number of NAs", 
+     xlab = "Year",
+     main = paste0( "fluorobotm NAs represent ", eval(round( length(fluo.NA)/nrow(eff2) * 100 , 2)), " % of the Data"))
 
-eff2[c(oxy),]
+axis(1, at = seq(2001, 2017,1))
 
+## n divided by 49 because of 49 levels of data. 
+```
 
-(rm.Oxy <- which(eff2$OXYBOTM > 12 | eff2$OXYBOTM == 0)) ### 99 100 338 339 411 625 652 823 824 
+I will not remove any outliers from this because the NAs make up `r round( length(fluo.NA)/nrow(eff2) * 100 , 2)` $\%$ of the data frame. I will **not** be using this as an explanatory variable.
 
-eff2[c(rm.Oxy),c(1,41,43:50)]
+#### Turbbotm QA/QC
 
+**Turbbotm** 
+
+```{r Turbbotm QAQC,results='hide',fig.keep='last'}
 
  ### TURBBOTM and FLUOROBOTM are not used as explanitory variables so there is no need to remove outliers
 
-plot(eff2$TURBBOTM, eff2$CARCHARHINUS.ACRONOTUS)
+plot(CPUE ~ turbbotm,
+     xlim = c(0,125), ylim = c(0,70),
+     data = eff2)
 
-range(eff2$TURBBOTM , na.rm=T)
+abline(v = 0, lty = 2, col = "red")
+abline(v = 100, lty = 2, col = "red")
+abline(v = 104, lty = 2, col = "red")
 
-(rm.Turb <- which(eff2$TURBBOTM > 100 | eff2$TURBBOTM <= 0)) ### 1994
+range(eff2$turbbotm , na.rm=T) # 0.0000 122.3585
 
-eff2[c(rm.Turb),]
+#(rm.Turb <- which(eff2$turbbotm > 100 | eff2$turbbotm <= 0)) # 27 individuals and 1323 lines
+#(rm.Turb <- which(eff2$turbbotm > 100 )) # 19 individuals  
+#(rm.Turb <- which(eff2$turbbotm > 104 )) # 5 individuals
+rm.Turb <- which(eff2$turbbotm > 110 ) # 1 individual
 
-#(rm.Fluo <-which(eff2$FLUOROBOTM > 30)) ### 1536, 1802, 2230, 2660, 2704
+(n.rm.turb <- length(rm.Turb)/49) ### 1 individual
 
 
-(n.rm <- length(rm.Sal) + length(rm.Oxy) + length(rm.Turb))
+plot(CPUE ~ turbbotm,
+     xlim = c(0,125), ylim = c(0,70),
+     data = eff2[-c(rm.Turb),],
+     pch = 19,
+     col = rgb(0,0,0, 0.25))
+
+#abline(v = 0, lty = 3, col = "green")
+abline(v = 100, lty = 2, col = "red")
+
+abline(v = 104, lty = 2, col = "red")
+abline(v = 110, lty = 3, col = "green")
+
+par(new = T)
+
+plot(CPUE ~ turbbotm,
+     data = eff2[c(rm.Turb),],
+     xlim = c(0,125), ylim = c(0,70),
+     xlab = "", ylab = "",
+     yaxt = "n", xaxt = "n",
+     pch = 19,
+     col = rgb(1,0,0, 0.25),
+     main = paste0(expression("n = "), eval(length(rm.Turb)/49)," Station(s) ", "(or " , eval(length(rm.Turb)), " lines of Data)"))
 
 ```
 
-4. remove outliers and create individual data frames for each species save as .csv file
+```{r Turb Nas, echo=FALSE,results='hide',fig.keep='last'}
+(turb.NA <- which(is.na(eff2$turbbotm) == TRUE))
 
-```{r Create sp.df, eval = FALSE}
+length(turb.NA)
+
+(turb.NA.percent.data <- length(turb.NA)/nrow(eff2) * 100)
+
+table(eff2$year[c(turb.NA)])
+
+hist(eff2$year[c(turb.NA)],
+     xaxt = "n",
+     labels = TRUE,
+     ylab = "number of NAs", 
+     xlab = "Year",
+     main = paste0( "turbbotm NAs represent ", eval(round( length(turb.NA)/nrow(eff2) * 100 , 2)), " % of the Data"))
+
+axis(1, at = seq(2001, 2017,1))
+
+```
+
+NAs in Turbbotm represent `r round( length(turb.NA)/nrow(eff2) * 100 , 2)` $\%$ of the data. This seems like a lot but I will include this as an explanatory variable. I am only removing turbidity $greater \ than \ 110$ which results in the removal of $1 \ station$ (if I remove turbidity greater than 104 this removes 5 stations and above 100 removes 27 stations).
+
+
+#### Oxybotm QA/QC
+
+**Oxybotm** Hypoxia near Louisiana coast where DO is less than 2 ppm [https://toxics.usgs.gov/hypoxia/hypoxic_zone.html], 
+Ranges 0 to 8 (Summer) [https://www.ncddc.noaa.gov/hypoxia/products/2010/]
+
+```{r Oxybotm QAQC,results='hide',fig.keep='last'}
+
+#eff2[c(rm.Sal),]
+
+### oxybotm
+
+range(eff2$oxybotm, na.rm = TRUE) # 0 to 10.7
+
+rm.oxy <- which(eff2$oxybotm == 0)
+
+#eff2[c(oxy),]
+
+plot(CPUE ~ oxybotm,
+     data = eff2[-c(rm.oxy),],
+     xlim = c(0,11), ylim = c(0,70),
+     pch = 19,
+     col = rgb(0,0,0, 0.15),
+     bty = "n")
+
+par(new = T)
+plot(CPUE ~ oxybotm,
+     data = eff2[c(rm.oxy),],
+     xlim = c(0,11), ylim = c(0,70),
+     xlab = "", ylab = "",
+     xaxt = "n", yaxt = "n",
+     pch = 19,
+     col = rgb(1,0,0, 0.25),
+     main = paste0(expression("n = "), eval(length(rm.oxy)/49)," Station(s) ", "(or " , eval(length(rm.oxy)), " lines of Data)"),
+     bty = "n")
+
+#abline(v = 9, col = "red", lty = 2)
+#abline(v = 10.5, col = "red", lty = 2)
+
+
+#(rm.Oxy <- which(eff2$oxybotm > 12 | eff2$oxybotm == 0)) ### 99 100 338 339 411 625 652 823 824 
+
+```
+
+
+```{r oxybotm Nas, echo=FALSE,results='hide',fig.keep='last'}
+(oxy.NA <- which(is.na(eff2$oxybotm) == TRUE))
+
+length(oxy.NA)
+
+(oxy.NA.percent.data <- length(oxy.NA)/nrow(eff2) * 100)
+
+table(eff2$year[c(oxy.NA)])
+
+hist(eff2$year[c(oxy.NA)],
+     xaxt = "n",
+     labels = TRUE,
+     ylab = "number of NAs", 
+     xlab = "Year",
+     main = paste0( "oxybotm NAs represent ", eval(round( length(oxy.NA)/nrow(eff2) * 100 , 2)), " % of the Data"))
+
+axis(1, at = seq(2001, 2017,1))
+
+```
+
+I'm not going to remove any *oxybotm* these seem fairly reasonable even though there are some in hypoxic waters. NAs from oxybotm represent `r round( length(oxy.NA)/nrow(eff2) * 100 , 2)` $\%$ of the data.
+
+#### Salinity QA/QC
+
+**Salinity** Ranges between 32 to 36.5 (WINTER) and 31 to 36.5 (SUMMER) on average in the northern GoM. [https://gulfatlas.noaa.gov/catalog/products/physical/seawater-salinity/index.html]
+
+```{r Salinity QAQC, eval=TRUE,results='hide',fig.keep='last'}
+range(eff2$salbotm, na.rm = TRUE) # 17.9 to 48.8
+
+      ## was less than 15
+#(rm.Sal <- which(eff2$salbotm > 40 | eff2$salbotm < 20)) ### 507  932 2705 2770 2771 2941 2979
+rm.Sal <- which(eff2$salbotm > 38 | eff2$salbotm < 23)
+
+par(mfrow = c(1,1))
+plot(CPUE ~ salbotm,
+     data = eff2[-c(rm.Sal),],
+     xlim = c(15, 50), ylim = c(0,70),
+     pch = 19,
+     col = rgb(0,0,0, 0.15),
+     main = "",
+     bty = "n")
+
+par(new = T)
+
+plot(CPUE ~ jitter(salbotm, amount = 0.5),
+     data = eff2[c(rm.Sal),],
+     xlim = c(15, 50), ylim = c(0,70),
+     xlab = "", ylab = "",
+     xaxt = "n", yaxt = "n",
+     pch = 19,
+     col = rgb(1,0,0, 0.15),
+     main = paste0(expression("n = "), eval(length(rm.Sal)/49)," Station(s) ", "(or " , eval(length(rm.Sal)), " lines of Data)"),
+     bty = "n" )
+
+abline(v = 40, col = "red", lty = 2)
+abline(v = 20, col = "red", lty = 2)
+
+abline(v = 38, col = "green", lty = 3)
+abline(v = 23, col = "green", lty = 3)
+
+#text(x= eff2$salbotm[c(rm.Sal)], y = eff2$CPUE[c(rm.Sal)] ,
+#      labels = as.character(round(eff2$salbotm[c(rm.Sal)],1)),
+#     pos = 3)
+```
+
+```{r salbotm Nas, echo=FALSE,results='hide',fig.keep='last'}
+(sal.NA <- which(is.na(eff2$salbotm) == TRUE))
+
+length(sal.NA)
+
+(sal.NA.percent.data <- length(sal.NA)/nrow(eff2) * 100)
+
+table(eff2$year[c(sal.NA)])
+
+hist(eff2$year[c(sal.NA)],
+     xaxt = "n",
+     labels = TRUE,
+     ylab = "number of NAs", 
+     xlab = "Year",
+     main = paste0( "salbotm NAs represent ", eval(round( length(sal.NA)/nrow(eff2) * 100 , 2)), " % of the Data"))
+
+axis(1, at = seq(2001, 2017,1))
+
+```
+
+I will remove salinity $less \ than \ 23$ and $greater \ than \ 38$ which will result in the removal of `r length(rm.Sal)/49` stations. NAs in Salinity account for `r round( length(sal.NA)/nrow(eff2) * 100 , 2)` $\%$ of the data.
+
+### 4. remove outliers and create individual data frames for each species save as .csv file
+
+```{r n to remove for QAQC}
+
+#eff2[c(rm.Turb),]
+
+#(rm.Fluo <-which(eff2$FLUOROBOTM > 30)) ### 1536, 1802, 2230, 2660, 2704
+
+(n.lines.rm <- length(rm.temp) + length(rm.Turb) + length(rm.Sal))
+
+(n.rm <- (length(rm.temp) + length(rm.Turb) + length(rm.Sal))/49 ) ### individuals
+
+```
+
+```{r Create CPUE3.csv, eval = FALSE}
 
 
   ### round 1 ###rm.EndLon
-(rm1 <- c(rm.Sal,rm.Oxy, rm.Turb) %>%
-   sort())
+rm1 <- c(rm.temp, rm.Turb, rm.Sal) %>%
+   sort()
 
-### round 2
-#(rm2 <- c(rm.Oxy, rm.Turb, rm.Fluo))
+length(rm1)
+length(unique(rm1))
 
-
-
+nrow(eff2)
 
 eff2 <- eff2[-c(rm1),]
 ######
 
+nrow(eff2)
+
 str(eff2)
-#write.csv(eff2,"data/CPUE3.csv", row.names = FALSE)
 
-(sp.list <- colnames(eff2[,c(43:50)]))
-
-##  which(names(eff) %in%  (sp.list <- colnames(eff[,c(43:50)])) )
+#8-15-18#write_csv_fn( eff2, file = "data/raw-data/CPUE3.csv", row.names = FALSE, proj)
 ```
 
 
+### 5. Load newly created .csv files and save to sp.df list
 
+```{r load eff3}
+eff3 <- read_csv_fn( "data/raw-data/CPUE3.csv", proj)
+```
 
-```{r Extract CPUE for each species and create .csv, eval = FALSE}
-### CARCHARHINUS.ACRONOTUS
+```{r Prep load data fn, eval=FALSE, include=FALSE}
+x <- eff3
 
-blacknose <- extract_taxa_fn(eff2,
-                             eff2$CARCHARHINUS.ACRONOTUS) %>%
-#  write_csv_fn(proj, file = "data/clean-data/blacknose.csv", row.names = FALSE)
-
-
-### CARCHARHINUS.BREVIPINNA
-
-spinner <- extract_taxa_fn(eff2,
-                                    eff2$CARCHARHINUS.BREVIPINNA) %>%
-#  write_csv_fn(proj, file = "data/clean-data/spinner.csv", row.names = FALSE)
+Species_Vec <- levels(x$common)
 
 
 
-### CARCHARHINUS.FALCIFORMIS
+  Female <- vector("list", length = length(x))
+  Male <- vector("list", length = length(x))
+  
+  
+  
+  Female <- list(blacknose =  filterD(x, common == Species_Vec[1], pres == 1, sex == "F"),
+                                       
+                                       blacktip = filterD(x, common == Species_Vec[2], pres == 1, sex == "F"),
+              
+                                       bull = filterD(x, common == Species_Vec[3], pres == 1, sex == "F"),
+              
+                                       sandbar = filterD(x, common == Species_Vec[4], pres == 1, sex == "F"),
+              
+                                       sharpnose = filterD(x, common == Species_Vec[5], pres == 1, sex == "F"),
+              
+                                       spinner = filterD(x, common == Species_Vec[6], pres == 1, sex == "F"),
+              
+                                       tiger = filterD(x, common == Species_Vec[7], pres == 1, sex == "F"))
+  
+  
+  Male <- list(blacknose =  filterD(x, common == Species_Vec[1], pres == 1, sex == "M"),
+                                     
+                                     blacktip = filterD(x, common == Species_Vec[2], pres == 1, sex == "M"),
+              
+                                     bull = filterD(x, common == Species_Vec[3], pres == 1, sex == "M"),
+              
+                                     sandbar = filterD(x, common == Species_Vec[4], pres == 1, sex == "M"),
+              
+                                     sharpnose = filterD(x, common == Species_Vec[5], pres == 1, sex == "M"),
+              
+                                     spinner = filterD(x, common == Species_Vec[6], pres == 1, sex == "M"),
+              
+                                     tiger = filterD(x, common == Species_Vec[7], pres == 1, sex == "M"))
 
-silky <- extract_taxa_fn(eff2,
-                                     eff2$CARCHARHINUS.FALCIFORMIS) %>%
-#  write_csv_fn(proj, file = "data/clean-data/silky.csv", row.names = FALSE)
+  tmp <- list(Female = Female,
+                    Male = Male)
+str(strat2$blacknose)
 
 
-
-### CARCHARHINUS.LEUCAS
-
-bull <- extract_taxa_fn(eff2,
-                                     eff2$CARCHARHINUS.LEUCAS) %>%
-#  write_csv_fn(proj, file = "data/clean-data/bull.csv", row.names = FALSE)
-
-
-
-### CARCHARHINUS.LIMBATUS
-
-blacktip <- extract_taxa_fn(eff2,
-                                     eff2$CARCHARHINUS.LIMBATUS) %>%
-#  write_csv_fn(proj, file = "data/clean-data/blacktip.csv", row.names = FALSE)
-
-
-
-### CARCHARHINUS.PLUMBEUS
-
-sandbar <- extract_taxa_fn(eff2,
-                                     eff2$CARCHARHINUS.PLUMBEUS) %>%
-#  write_csv_fn(proj, file = "data/clean-data/sandbar.csv", row.names = FALSE)
-
-
-
-### GALEOCERDO.CUVIER
-
-tiger <- extract_taxa_fn(eff2,
-                                     eff2$GALEOCERDO.CUVIER) %>%
-#  write_csv_fn(proj, file = "data/clean-data/tiger.csv", row.names = FALSE)
-
-
-
-### RHIZOPRIONODON.TERRAENOVAE
-
-sharpnose <- extract_taxa_fn(eff2,
-                                     eff2$RHIZOPRIONODON.TERRAENOVAE) %>%
-#  write_csv_fn(proj, file = "data/clean-data/sharpnose.csv", row.names = FALSE)
 
 ```
 
-5. Load newly created .csv files and save to sp.df list
+```{r Load data function}
+load_data <- function(data = data, strata = 1){
+  
+  require(FSA)
+  require(magrittr)
+  
+  Species_Vec <- levels(data$common)
+  Female <- vector("list", length = length(data))
+  Male <- vector("list", length = length(data))
+  
+  
+  if(strata == 1){
+    
+  Female <- list(blacknose =  filterD(data, common == Species_Vec[1], sex == "F"),
+                                       
+                                       blacktip = filterD(data, common == Species_Vec[2], sex == "F"),
+              
+                                       bull = filterD(data, common == Species_Vec[3], sex == "F"),
+              
+                                       sandbar = filterD(data, common == Species_Vec[4], sex == "F"),
+              
+                                       sharpnose = filterD(data, common == Species_Vec[5], sex == "F"),
+              
+                                       spinner = filterD(data, common == Species_Vec[6], sex == "F"),
+              
+                                       tiger = filterD(data, common == Species_Vec[7], sex == "F"))
+  
+  
+  Male <- list(blacknose =  filterD(data, common == Species_Vec[1], sex == "M"),
+                                     
+                                     blacktip = filterD(data, common == Species_Vec[2], sex == "M"),
+              
+                                     bull = filterD(data, common == Species_Vec[3], sex == "M"),
+              
+                                     sandbar = filterD(data, common == Species_Vec[4], sex == "M"),
+              
+                                     sharpnose = filterD(data, common == Species_Vec[5], sex == "M"),
+              
+                                     spinner = filterD(data, common == Species_Vec[6], sex == "M"),
+              
+                                     tiger = filterD(data, common == Species_Vec[7], sex == "M"))
+  
+    output <- list(Female = Female,
+                 Male = Male)
+    
+  } else if(strata == 2){
+    
+  Female <- list(blacknose =  filterD(data, common == Species_Vec[1], pres == 1, sex == "F"),
+                                       
+                                       blacktip = filterD(data, common == Species_Vec[2], pres == 1, sex == "F"),
+              
+                                       bull = filterD(data, common == Species_Vec[3], pres == 1, sex == "F"),
+              
+                                       sandbar = filterD(data, common == Species_Vec[4], pres == 1, sex == "F"),
+              
+                                       sharpnose = filterD(data, common == Species_Vec[5], pres == 1, sex == "F"),
+              
+                                       spinner = filterD(data, common == Species_Vec[6], pres == 1, sex == "F"),
+              
+                                       tiger = filterD(data, common == Species_Vec[7], pres == 1, sex == "F"))
+  
+  
+  Male <- list(blacknose =  filterD(data, common == Species_Vec[1], pres == 1, sex == "M"),
+                                     
+                                     blacktip = filterD(data, common == Species_Vec[2], pres == 1, sex == "M"),
+              
+                                     bull = filterD(data, common == Species_Vec[3], pres == 1, sex == "M"),
+              
+                                     sandbar = filterD(data, common == Species_Vec[4], pres == 1, sex == "M"),
+              
+                                     sharpnose = filterD(data, common == Species_Vec[5], pres == 1, sex == "M"),
+              
+                                     spinner = filterD(data, common == Species_Vec[6], pres == 1, sex == "M"),
+              
+                                     tiger = filterD(data, common == Species_Vec[7], pres == 1, sex == "M"))
+  
+  output <- list(Female = Female,
+                 Male = Male)
+    
+  } else stop("Strata must equal either 1 or 2 !!!")
+  
+  return(output)
+}
+
+
+
+```
+
+
+```{r test load data function}
+
+test_strata1 <- load_data(data = eff3, strata = 1)
+
+str(test_strata1$Female$blacknose)
+
+
+test_strata2 <- load_data(data = eff3, strata = 2)
+
+str(test_strata2$Female$blacknose)
+str(test_strata2$Male$sharpnose)
+
+### Mature Adults from strata 1
+
+test_Adult_strata1 <- load_data(data = eff3[eff3$maturity == "A",]%>% droplevels(), strata = 1) 
+
+str(test_Adult_strata1$Female$blacknose)
+
+str(test_Adult_strata1$Male$blacknose)
+
+str(test_Adult_strata1$Female$sharpnose)
+
+str(test_Adult_strata1$Male$sharpnose)
+
+### Good
+
+```
+
+
+### 6. make new cpue plots and make sure outliers are gone.
 
 ```{r}
-sp.df <- list(blacknose = read_csv_fn(proj, "data/clean-data/blacknose.csv"),
-              blacktip = read_csv_fn(proj, "data/clean-data/blacktip.csv"),
-              bull = read_csv_fn(proj, "data/clean-data/bull.csv"),
-              sandbar = read_csv_fn(proj, "data/clean-data/sandbar.csv"),
-              sharpnose = read_csv_fn(proj, "data/clean-data/sharpnose.csv"),
-              silky = read_csv_fn(proj, "data/clean-data/silky.csv"),
-              spinner = read_csv_fn(proj, "data/clean-data/spinner.csv"),
-              tiger = read_csv_fn(proj, "data/clean-data/tiger.csv"))
+fem <- test_strata1$Female
+mal <- test_strata1$Male
+
+str(fem$blacknose)
+str(mal$blacknose)
 ```
 
-6. make new cpue plots and make sure outliers are gone.
 
-```{r New Plot cpe vs all vars, echo=FALSE}
-for(i in 1:length(sp.df)){
+
+```{r New Plot cpe vs all vars, echo=FALSE, eval=TRUE}
+
+for(i in 1:length(fem)){
   
   oldpar <- par(mfrow=c(3,4), mar=c(5,4,2,1), oma=c(1,0,3,1))
   
-  plot(cpe~YEAR,
-       data = sp.df[[i]])
+  plot(CPUE ~ year,
+       data = fem[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$YEAR, sp.df[[i]]$cpe)),
+               round(cor(fem[[i]]$year,
+                         fem[[i]]$CPUE ),
+                     3) ),
         side=3,line=0)
   
-  plot(cpe~MONTH,
-       data = sp.df[[i]])
-  
-  plot(cpe~AVG.DEPTH,
-       data = sp.df[[i]])
+  plot(CPUE ~ startdepth,
+       data = fem[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$AVG.DEPTH, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(fem[[i]]$startdepth,
+                         fem[[i]]$CPUE,
+                         use = "complete.obs"),
+                     3)),
         side=3,line=0)
   
-  plot(cpe~SALBOTM,
-       data = sp.df[[i]])
+  plot(CPUE ~ salbotm,
+       data = fem[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$SALBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(fem[[i]]$salbotm,
+                         fem[[i]]$CPUE, 
+                         use = "complete.obs"),
+                     3)),
         side=3,line=0)
   
-  plot(cpe~TEMPBOTM,
-       data = sp.df[[i]])
+  plot(CPUE ~ tempbotm,
+       data = fem[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$TEMPBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(fem[[i]]$tempbotm,
+                         fem[[i]]$CPUE, 
+                         use = "complete.obs"),
+                     3)),
         side=3,line=0)
   
-  plot(cpe~FLUOROBOTM,
-       data = sp.df[[i]])
+  plot(CPUE ~ fluorobotm,
+       data = fem[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$FLUOROBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(fem[[i]]$fluorobotm, 
+                         fem[[i]]$CPUE, 
+                         use = "complete.obs"),
+                     3)),
         side=3,line=0)
   
-  plot(cpe~TURBBOTM,
-       data = sp.df[[i]])
+  plot(CPUE ~ turbbotm,
+       data = fem[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$TURBBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(fem[[i]]$turbbotm,
+                         fem[[i]]$CPUE, 
+                         use = "complete.obs"),
+                     3)),
         side=3,line=0)
   
-  plot(cpe~OXYBOTM,
-       data = sp.df[[i]])
+  plot(CPUE ~ oxybotm,
+       data = fem[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$OXYBOTM, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(fem[[i]]$oxybotm,
+                         fem[[i]]$CPUE, 
+                         use = "complete.obs"),
+                     3) ),
         side=3,line=0)
   
-  plot(cpe~dombot8,
-       data = sp.df[[i]],
+  plot(CPUE ~ bottype4,
+       data = fem[[i]],
        xlab="", las=2)
   
-  plot(cpe~Dis.to.SHORE,
-       data = sp.df[[i]],
+  plot(CPUE ~ Dis.to.SHORE,
+       data = fem[[i]],
        las=2)
     mtext(paste0("r = ",
-               cor(sp.df[[i]]$Dis.to.SHORE, sp.df[[i]]$cpe, use = "complete.obs")),
+               round(cor(fem[[i]]$Dis.to.SHORE,
+                         fem[[i]]$CPUE,
+                         use = "complete.obs"),
+                     3)),
         side=3,line=0)
 
-  plot(cpe~STARTLAT,
-       data = sp.df[[i]])
+  plot(CPUE ~ startlat,
+       data = fem[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$STARTLAT, sp.df[[i]]$cpe)),
+               round(cor(fem[[i]]$startlat,
+                         fem[[i]]$CPUE ),
+                     3)),
         side=3,line=0)
   
-  plot(cpe~STARTLON,
-       data = sp.df[[i]])
+  plot(CPUE ~ startlon,
+       data = fem[[i]])
   mtext(paste0("r = ",
-               cor(sp.df[[i]]$STARTLON, sp.df[[i]]$cpe)),
+               round(cor(fem[[i]]$startlon,
+                         fem[[i]]$CPUE ),
+                     3)),
         side=3,line=0)
   
-  mtext(names(sp.df[i]), side=3, line=0.65, outer=TRUE, cex=2, 
+  ### Add Species common name to Title
+  mtext(names(fem[i]), 
+        side=3, 
+        line=0.65, 
+        outer=TRUE, 
+        cex=2, 
         font=2)
   
   par(oldpar)

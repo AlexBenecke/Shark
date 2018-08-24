@@ -1,0 +1,471 @@
+---
+title: "Data Exploration"
+author: "Alex Benecke"
+date: "August 15, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load Packages, include=FALSE}
+require(FSA)
+require(tidyverse)
+require(dplyr)
+require(magrittr)
+require(scales)
+require(pipeR)
+require(kableExtra)
+
+
+
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" # Specify project where data is stored 
+
+source("5_functions/load_data.R")
+```
+
+```{r Load Data, results = 'hide'}
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj)
+
+eff3$count <- 1
+
+str(eff3)
+headtail(eff3)
+
+strat1_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 1)
+strat2_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 2)
+
+strat1_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 1)
+strat2_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 2)
+
+```
+
+```{r Make unique Station.ID, results = 'hide'}
+
+### S1 Adult
+
+for(i in 1:length(strat1_Adult)){
+  
+  for(j in 1:length(strat1_Adult[[i]])){
+    
+      for(k in 1:nrow(strat1_Adult[[i]][[j]])){
+    
+    strat1_Adult[[i]][[j]]$Station.ID[k] <- paste0("Station_", k)
+    
+  }
+    
+  }
+  
+}
+
+headtail(strat1_Adult[[1]][[5]])
+str(strat1_Adult[[1]][[5]])
+
+### S1 Juvenile
+
+for(i in 1:length(strat1_Juvenile)){
+  
+  for(j in 1:length(strat1_Juvenile[[i]])){
+    
+      for(k in 1:nrow(strat1_Juvenile[[i]][[j]])){
+    
+    strat1_Juvenile[[i]][[j]]$Station.ID[k] <- paste0("Station_", k)
+    
+  }
+    
+  }
+  
+}
+
+
+headtail(strat1_Juvenile[[1]][[5]])
+str(strat1_Juvenile[[1]][[5]])
+### S2 Adult
+
+for(i in 1:length(strat2_Adult)){
+  
+  for(j in 1:length(strat2_Adult[[i]])){
+    
+      for(k in 1:nrow(strat2_Adult[[i]][[j]])){
+    
+    strat2_Adult[[i]][[j]]$Station.ID[k] <- paste0("Station_", k)
+    
+  }
+    
+  }
+  
+}
+
+
+headtail(strat2_Adult[[1]][[5]])
+str(strat2_Adult[[1]][[5]])
+### S2 Juvenile
+
+
+for(i in 1:length(strat2_Juvenile)){
+  
+  for(j in 1:length(strat2_Juvenile[[i]])){
+    
+      for(k in 1:nrow(strat2_Juvenile[[i]][[j]])){
+    
+    strat2_Juvenile[[i]][[j]]$Station.ID[k] <- paste0("Station_", k)
+    
+  }
+    
+  }
+  
+}
+
+
+headtail(strat2_Juvenile[[1]][[5]])
+str(strat2_Juvenile[[1]][[5]])
+
+
+
+
+
+```
+
+
+## Sample sizes
+
+### Table of Positive catch sites per year
+```{r Make Data frame for numver of sites with positive catch each year, results = 'hide'}
+Species <- levels(eff3$common)
+
+for(i in 1:length( levels( eff3$common ) ) ){
+  
+ ## Female Adult
+  aggregate(pres ~ year, data =strat1_Adult$Female[[i]], FUN = sum, drop = FALSE)[,"pres"] %>%
+    t() %>%
+    data.frame() %>%
+    mutate( Species = Species[i], Sex = "Female", Maturity = "Adult") %>>%
+    (~tmp_FA)
+  
+  colnames(tmp_FA) <- c(seq(2001,2017,1), "Species", "Sex", "Maturity")
+
+
+ ## Female Juvenile
+  aggregate(pres ~ year, data =strat1_Juvenile$Female[[i]], FUN = sum, drop = FALSE)[,"pres"] %>%
+    t() %>%
+    data.frame() %>%
+    mutate( Species = Species[i], Sex = "Female", Maturity = "Juvenile") %>>%
+    (~tmp_FJ)
+  
+  colnames(tmp_FJ) <- c(seq(2001,2017,1), "Species", "Sex", "Maturity")
+
+
+ ## Male Adult
+  aggregate(pres ~ year, data =strat1_Adult$Male[[i]], FUN = sum, drop = FALSE)[,"pres"] %>%
+    t() %>%
+    data.frame() %>%
+    mutate( Species = Species[i], Sex = "Male", Maturity = "Adult")  %>>%
+    (~tmp_MA)
+  
+  colnames(tmp_MA) <- c(seq(2001,2017,1), "Species", "Sex", "Maturity")
+
+
+ ## Male Juvenile
+  aggregate(pres ~ year, data =strat1_Juvenile$Male[[i]], FUN = sum, drop = FALSE)[,"pres"] %>%
+    t() %>%
+    data.frame() %>%
+    mutate( Species = Species[i], Sex = "Male", Maturity = "Juvenile") %>>%
+    (~tmp_MJ)
+  
+  colnames(tmp_MJ) <- c(seq(2001,2017,1), "Species", "Sex", "Maturity")
+
+if(i == 1){
+  
+  rbind(tmp_FA, tmp_FJ, tmp_MA, tmp_MJ) %>>%
+    (~tmp.df)  
+  
+} else{
+  
+  rbind(tmp.df, tmp_FA, tmp_FJ, tmp_MA, tmp_MJ) %>>%
+    (~tmp.df)
+  
+}
+
+}
+
+
+
+pres.tbl <- tmp.df %>%
+  select(Species, Sex, Maturity, "2001":"2017")
+pres.tbl
+
+
+
+pres.tbl$Total <- apply(pres.tbl[,4:20], 1, FUN = sum)
+pres.tbl
+
+ 
+#tmpa <- aggregate(Total ~ Species + Sex , data = pres.tbl, FUN = sum, drop = FALSE) %>%
+#  arrange(Species)
+#tmpa
+
+#pres.tbl$Sex.Total <- rep(tmpa$Total,each = 2)
+#pres.tbl
+
+#tmpb <- aggregate(Total ~ Species , data = pres.tbl, FUN = sum, drop = FALSE) %>%
+#  arrange(Species)
+#tmpb
+
+
+#pres.tbl$Species.Total <- rep(tmpb$Total,each = 4)
+
+pres.tbl
+
+```
+
+
+```{r,include=FALSE, eval=FALSE}
+### Get total for combined species by Sex and Maturity for each Year
+
+### All Species
+#pres.tbl
+
+### Female Adult
+FA <- subset(pres.tbl, Sex =="Female" & Maturity == "Adult")
+FA <- apply(FA[,c(4:20)], 2, FUN = sum) %>% t() %>%  data.frame()
+colnames(FA) <- seq(2001, 2017, 1)
+
+FA$Species <- "All Species"
+FA$Sex <- "Female"
+FA$Maturity <- "Adult"
+
+FA %<>% select(Species, Sex, Maturity, "2001":"2017")
+#FA
+
+### Female Juvenile
+FJ <- subset(pres.tbl, Sex =="Female" & Maturity == "Juvenile")
+FJ <- apply(FJ[,c(4:20)], 2, FUN = sum)%>% t() %>%  data.frame()
+colnames(FJ) <- seq(2001, 2017, 1)
+
+FJ$Species <- "All Species"
+FJ$Sex <- "Female"
+FJ$Maturity <- "Juvenile"
+
+FJ %<>% select(Species, Sex, Maturity, "2001":"2017")
+#FJ
+
+### Male Adult
+MA <- subset(pres.tbl, Sex =="Male" & Maturity == "Adult")
+MA <- apply(MA[,c(4:20)], 2, FUN = sum)%>% t() %>%  data.frame()
+colnames(MA) <- seq(2001, 2017, 1)
+
+MA$Species <- "All Species"
+MA$Sex <- "Male"
+MA$Maturity <- "Adult"
+
+MA %<>% select(Species, Sex, Maturity, "2001":"2017")
+#MA
+
+### Male Juvenile
+MJ <- subset(pres.tbl, Sex =="Male" & Maturity == "Juvenile")
+MJ <- apply(MJ[,c(4:20)], 2, FUN = sum)%>% t() %>%  data.frame()
+colnames(MJ) <- seq(2001, 2017, 1)
+
+MJ$Species <- "All Species"
+MJ$Sex <- "Male"
+MJ$Maturity <- "Juvenile"
+
+MJ %<>% select(Species, Sex, Maturity, "2001":"2017")
+#MJ
+
+
+sex.mat.tbl <- rbind(FA, FJ, MA, MJ)
+
+
+#sex.mat.tbl$Species.Total <- NA
+
+sex.mat.tbl$Total <- apply(sex.mat.tbl[,c(4:20)], 1, FUN = sum)
+
+tmp.sex.total <- rbind(sum(FA[,c(4:20)],FJ[,c(4:20)]), sum(MA[,c(4:20)],MJ[,c(4:20)]))
+#tmp.sex.total
+
+sex.mat.tbl$Sex.Total <- rep(tmp.sex.total, each = 2)
+sex.mat.tbl$Species.Total <- NA
+
+sex.mat.tbl
+```
+
+```{r, results = 'hide'}
+
+### Get total number of sites sampled each year
+aggregate(count ~ year, data =strat1_Adult$Female[[i]], FUN = sum, drop = FALSE)[,"count"] %>%
+    t() %>%
+    data.frame() %>%
+    mutate( Species = "Total Stations", Sex = "", Maturity = "") %>>%
+    (~all.sites.yr.sum)
+  
+  colnames(all.sites.yr.sum) <- c(seq(2001,2017,1), "Species", "Sex", "Maturity")
+
+all.sites.yr.sum %<>%
+  select(Species, Sex, Maturity, "2001":"2017")
+
+all.sites.yr.sum
+
+all.sites.yr.sum$Total <- apply(all.sites.yr.sum[,c(4:20)], 1, FUN = sum)
+
+all.sites.yr.sum
+
+
+#all.sites.yr.sum$Sex.Total <- NA
+#all.sites.yr.sum$Species.Total <- NA
+all.sites.yr.sum
+
+
+pres.tbl <- rbind(pres.tbl, all.sites.yr.sum)
+pres.tbl
+
+#8-20-2018#write_csv_fn(pres.tbl, file = "data/clean-data/table-data/pres_tbl.csv", proj = proj)
+
+```
+
+
+
+
+
+```{r Make table of positive catch sites per year}
+pres.tbl %>%
+  kable() %>%
+  kable_styling(full_width = F, 
+                position = "center", 
+                font_size = 10,
+                bootstrap_options = "striped") %>%
+  column_spec(1, bold = T, background = "White") %>%
+  column_spec(2, background = "White") %>%
+  column_spec(21, border_left = T) %>%
+  collapse_rows(c(1:3), valign = "middle")
+```
+
+
+I will not be able to use **Maturity** for **Tiger**, and Possibly **Spinner**, and **Bull**. 
+
+
+### Table Percent Sites sampled per year with Positive catch
+
+
+```{r Prep Percent pos catch table, results='hide'}
+all.sites.yr.sum <- pres.tbl[29,-c(22:23)]
+row.names(all.sites.yr.sum) <- c(1)         
+
+all.sites.yr.sum
+
+
+tmp <- pres.tbl[c(1:28),-c(22:23)]
+tmp
+
+
+for(i in 1:nrow(tmp)){
+  
+  tmp[i,c(4:21)] <- round((tmp[i,c(4:21)]/all.sites.yr.sum[1,c(4:21)])*100, 1)
+  
+}
+
+
+tmp
+
+percent.pres.tbl <- tmp
+
+
+percent.pres.tbl
+
+#8-20-2018#write_csv_fn(percent.pres.tbl, file = "data/clean-data/table-data/percent_pres_tbl.csv", proj = proj)
+
+
+```
+
+```{r Make table of Percent positive of each species by year}
+percent.pres.tbl %>%
+  kable() %>%
+  kable_styling(full_width = F, 
+                position = "center", 
+                font_size = 10,
+                bootstrap_options = "striped") %>%
+  column_spec(1, bold = T, background = "White") %>%
+  column_spec(2, background = "White") %>%
+  column_spec(21, border_left = T) %>%
+  collapse_rows(c(1:3), valign = "middle")
+```
+
+
+
+I need a table of descriptive stats
+
+## Variables
+
+I will make a table with each variable and its range and mean
+
+```{r, results='hide'}
+head(strat1_Adult$Male$sharpnose)
+
+var.tbl <- eff3 %>%
+  select(year, startlat, startlon, startdepth, tempbotm, fluorobotm, turbbotm, oxybotm, salbotm, Dis.to.SHORE, CPUE, Adj.CPUE)
+
+head(var.tbl)
+
+length(var.tbl)
+
+
+
+Min <- round(apply(var.tbl, 2, FUN =  min, na.rm = T),0)
+Max <- round(apply(var.tbl, 2, FUN =  max, na.rm = T),0)
+Mean <- round(apply(var.tbl, 2, FUN =  mean, na.rm = T),0)
+SD <- round(apply(var.tbl, 2, FUN =  sd, na.rm = T),0)
+
+var.tbl.2 <- rbind(Min, Max, Mean, SD) %>% t() %>% data.frame()
+
+var.tbl.2
+
+#var.tbl.2$Variable <- rownames(var.tbl.2) 
+
+#var.tbl.2
+
+#var.tbl.2 %<>%  select(Variable, Min:Mean)
+
+#var.tbl.2
+
+
+#8-20-2018#write_csv_fn(var.tbl.2, file = "data/clean-data/table-data/var_tbl.csv", proj = proj)
+
+```
+
+
+```{r}
+var.tbl.2 %>%
+  kable() %>%
+  kable_styling(full_width = F, 
+                position = "center", 
+                font_size = 10,
+                bootstrap_options = "striped") 
+```
+
+
+| Variable                    | Range                                     | Mean | 2001 | 2002 | 2003 | 2004 | 2005 | ... | 2017 | 
+|:---------------------------:|:-----------------------------------------:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Lattitude                   |  `r range(eff3$startlat , na.rm=T)`       |  `r mean(eff3$startlat , na.rm=T)`      |     |     |     |     |     |     | |
+| Longitude                   |  `r range(eff3$startlon , na.rm=T)`       |  `r mean(eff3$startlon , na.rm=T)`      |     |     |     |     |     |     | |
+| Depth (m)                   |  `r range(eff3$startdepth , na.rm=T)`     |  `r mean(eff3$startdepth , na.rm=T)`   |     |     |     |     |     |     | |
+| Temperature (C)             |  `r range(eff3$tempbotm , na.rm=T)`       |  `r mean(eff3$tempbotm , na.rm=T)`      |     |     |     |     |     |     | | 
+| Fluoro                      |  `r range(eff3$fluorobotm , na.rm=T)`     |  `r mean(eff3$fluorobotm , na.rm=T)`   |     |     |     |     |     |     | |
+| Turbidity                   |  `r range(eff3$turbbotm , na.rm=T)`       |  `r mean(eff3$turbbotm , na.rm=T)`      |     |     |     |     |     |     | | 
+| Bottom Oxygen               |  `r range(eff3$oxybotm , na.rm=T)`        |  `r mean(eff3$oxybotm , na.rm=T)`         |     |     |     |     |     |     | | 
+| Salinity                    |  `r range(eff3$salbotm , na.rm=T)`        |  `r mean(eff3$salbotm , na.rm=T)`         |     |     |     |     |     |     | |
+| Distance to Shore (km)      |  `r range(eff3$Dis.to.SHORE , na.rm=T)`   |  `r mean(eff3$Dis.to.SHORE , na.rm=T)`   |     |     |     |     |     |     | |
+| CPUE                        |  `r range(eff3$CPUE , na.rm=T)`           |  `r mean(eff3$CPUE , na.rm=T)`              |     |     |     |     |     |     | |
+| Adj.CPUE                    |  `r range(eff3$Adj.CPUE , na.rm=T)`       |  `r mean(eff3$Adj.CPUE , na.rm=T)`      |     |     |     |     |     |     | | 
+
+
+
+### Need to do
+
+
+Number Male Female and Unknown as well as Adult Juvenile and Unknown
+
+
+
+
