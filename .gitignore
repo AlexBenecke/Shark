@@ -5,3 +5,9 @@
 data
 data.lnk
 output.lnk
+TEST_ITERATIVE_K_2.R
+TEST_ITERATIVE_K.R
+eff.csv
+study_area.csv
+output
+study_area2.csv
