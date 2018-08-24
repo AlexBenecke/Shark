@@ -1,0 +1,103 @@
+---
+title: "AIC Check"
+author: "Alex Benecke"
+date: "July 23, 2018"
+output: html_document
+---
+
+
+```{r}
+### Load Packages
+library(FSA)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(scales)
+library(mgcv)
+```
+```{r}
+### Load Data
+sharpnose <- read.csv("data/terraenovae.df.csv")
+sharpnose$DATE <- as.POSIXlt(sharpnose$DATE)
+sharpnose$MONTH  <- factor(strftime(sharpnose$DATE, format = "%b"))
+sharpnose$YEAR <- factor(sharpnose$YEAR)
+
+```
+
+
+
+
+I need to see if increasing the number of basis dimensions (k) affects the AIC score. I think it will because for each k within a spline one additional knot or $\beta$ is created and these are accounted for in the maximum degrees of freedom, which, is accounted for in the calculation of AIC.
+
+$$ AIC = 2K - 2ln(\hat{L}) $$
+ Where $K$ is the number of parameters and $\hat{L}$ is the maximum value of the liklihood function of the model.
+
+
+
+```{r AIC Check, cache=TRUE}
+### Fit a simple GAM with default k values
+
+AIC_1 <- gam((cpe + 1) ~ s(STARTLON, STARTLAT) +
+               s(SALBOTM),
+             family = Gamma(link=log),
+             data = sharpnose)
+
+par(mfrow=c(2,2))
+gam.check(AIC_1) ### both k-values seem like they could be increased especially Lat Lon
+
+
+### Now fit gam with elevated k-value
+
+AIC_2 <- gam((cpe + 1) ~ s(STARTLON, STARTLAT, k = 200) +
+               s(SALBOTM,
+                 k = 60),
+             family = Gamma(link=log),
+             data = sharpnose)
+
+gam.check(AIC_2)
+
+AIC(AIC_1, AIC_2)
+
+AIC_1$aic
+AIC_2$aic
+
+```
+
+ Looks like the higher the basis dimensions (k) the lower the AIC score. This makes sense since the basis dimensions are factored into the total degrees of freedom which affects the AIC score.
+
+
+Lets see if adding a $\gamma$ of 1.4 will resolve the difference. This essentially adds an additional penalty to each degree of freedom to prevent overfitting.
+
+```{r Gamma AIC Check, cache=TRUE}
+AIC_3 <- gam((cpe + 1) ~ s(STARTLON, STARTLAT) +
+               s(SALBOTM),
+             family = Gamma(link=log),
+             gamma=1.4,
+             data = sharpnose)
+
+
+gam.check(AIC_3) ### both k-values seem like they could be increased especially Lat Lon
+
+
+### Now fit gam with elevated k-value
+
+AIC_4 <- gam((cpe + 1) ~ s(STARTLON, STARTLAT, k = 200) +
+               s(SALBOTM,
+                 k = 60),
+             family = Gamma(link=log),
+             gamma=1.4,
+             data = sharpnose)
+
+gam.check(AIC_4)
+
+
+
+
+AIC(AIC_1, AIC_3, AIC_2, AIC_4)
+```
+
+
+
+
+
+

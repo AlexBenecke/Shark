@@ -1,0 +1,318 @@
+---
+title: "Model Sensitivity to k"
+author: "Alex Benecke"
+date: "July 26, 2018"
+output: 
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    fig_width: 8
+    fig_height: 6
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load Packages}
+library(mgcv)
+library(FSA)
+library(dplyr)
+library(magrittr)
+library(tidyverse)
+
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" # Specify project where data is stored 
+
+
+```
+
+```{r Load Data}
+sn_pos <- read_csv_fn( "data/clean-data/sharpnose.csv", proj) %>%
+  subset(pres == 1) %>%
+  mutate(YEAR = factor(YEAR), 
+         MONTH = factor(strftime(DATE, format = "%b")))
+
+
+
+str(sn_pos)
+```
+
+
+
+The point of this document is to explore the model sensitivity to the selection of $k$. ...
+
+I will randomly select $k$ values for the smooth of Lat and Lon ($ 60 \leq k \leq 80$) and for the smooths of the explanitory variables ($5 \leq k \leq 20$) and use these values to fit 50 global models.
+$$g_{1}(y) = g_{2}(Lon, Lat) + \sum^{n}_{i=1} s_{i}(x_{i}) + factor(Bottom ~ Substrate) + re_{yr} + \epsilon $$
+
+
+First I will need to create a vector of the $k$ values I will test
+
+
+
+## Larger range of k's
+
+Lets repeat with a larger range of potential k's
+
+
+```{r k vectors, eval = FALSE}
+n.<- 500
+(k_ll <- sample(x = seq(40 , 100, 1), size = n., replace = T))
+
+(k_ex1 <- sample(x = seq(5 , 20, 1), size = n., replace = T))
+(k_ex2 <- sample(k_ex1, size = n.))
+(k_ex3 <- sample(k_ex1, size = n.))
+(k_ex4 <- sample(k_ex1, size = n.))
+(k_ex5 <- sample(k_ex1, size = n.))
+```
+
+Real quick I will create a list of names
+
+
+```{r, eval = FALSE}
+(names <- numeric(500))
+
+for(i in 1:500){
+  
+  names[i] <- paste0("model", "_", i)
+  
+}
+
+names
+```
+
+Now I will write a loop that will fit the global gam model 50 times while randomly sellecting a k value from the vector of potential k's I cereated above.
+```{r, eval=FALSE}
+(random_k_models <- vector("list", 500))
+
+mat. <- c()
+
+system.time(
+for(i in 1:500){
+  
+  random_k_models[[i]] <- gam((cpe +1) ~ s(STARTLON, STARTLAT, k = k_ll[i]) + 
+                                s(AVG.DEPTH, k = k_ex1[i]) + 
+                                s(TEMPBOTM, k = k_ex2[i]) + 
+                                s(TURBBOTM, k = k_ex3[i]) +
+                                s(OXYBOTM, k = k_ex4[i]) + 
+                                s(SALBOTM, k = k_ex5[i]) + 
+                                s(YEAR, bs = "re"),
+                              data = sn_pos,
+                              family = Gamma(link = log))
+  
+ mat.[i] <- paste( paste0("model", "_", i), AIC(random_k_models[[i]]), BIC(random_k_models[[i]]), k_ll[i], k_ex1[i], k_ex2[i], k_ex3[i], k_ex4[i], k_ex5[i], sep = ",")
+ 
+write(mat., file = "data/rand.samp.k.val.sim.csv")
+
+
+}
+)
+names(random_k_models) <- c(names)
+
+
+random_k_models$model_1
+```
+```{r}
+
+#save( random_k_models, file = "output/output_model-building/random_k_models.rda")
+
+load( file = "output/output_model-building/random_k_models.rda")
+```
+
+
+```{r}
+k_samp <- read_csv_fn( "data/clean-data/k_data/k_samp.csv", proj) %>%
+  arrange(AIC)
+
+head(k_samp)
+#str(k_samp)
+```
+
+
+```{r}
+edf_Lat_Lon <- numeric(500)
+edf_Depth <- numeric(500)
+edf_Temp <- numeric(500)
+edf_Turb <- numeric(500)
+edf_Oxy <- numeric(500)
+edf_Sal <- numeric(500)
+
+
+for(i in 1:length(random_k_models)){
+  
+  edf_Lat_Lon[i] <- summary(random_k_models[[i]])$edf[1]
+  edf_Depth[i] <- summary(random_k_models[[i]])$edf[2]
+  edf_Temp[i] <- summary(random_k_models[[i]])$edf[3]
+  edf_Turb[i] <- summary(random_k_models[[i]])$edf[4]
+  edf_Oxy[i] <- summary(random_k_models[[i]])$edf[5]
+  edf_Sal[i] <- summary(random_k_models[[i]])$edf[6]
+  
+}
+
+
+plot(edf_Lat_Lon~k_samp$Lat.Lon)
+plot(edf_Depth~k_samp$Depth)
+plot(edf_Temp~k_samp$Temp)
+plot(edf_Turb~k_samp$Turb)
+plot(edf_Oxy~k_samp$Oxy)
+plot(edf_Sal~k_samp$Sal)
+```
+
+
+
+Now lets get some summary information about the models
+
+```{r, echo=FALSE}
+
+AIC <- unlist(lapply(random_k_models, function(x) AIC(x)))
+  
+BIC <- unlist(lapply(random_k_models, function(x) BIC(x)))
+  
+GCV <- unlist(lapply(random_k_models, function(x) x$gcv.ubre))
+  
+  
+min_AIC <- min(AIC)
+  
+delta_AIC <- numeric(length(AIC))
+
+for(i in 1:length(AIC)){
+  delta_AIC[i] = AIC[i] - min_AIC
+  }
+
+
+### Create results df
+  
+results <- data.frame(model = names(random_k_models),
+                      AIC = AIC,
+                      delta_AIC = delta_AIC,
+                      GCV = GCV,
+                      BIC = BIC) %>%
+  arrange(AIC) 
+  
+results[c(1:10,90:100),] 
+```
+
+
+
+
+```{r, eval=TRUE}
+all_edf <- lapply(random_k_models, function(x) summary(x)$'edf')
+
+all_edf_vec <- unlist(all_edf)
+
+#write_csv_fn(all_edf_vec, file = "data/clean-data/k_data/all_edf_vec.csv", proj, row.names = FALSE)
+
+#edf_Lat_Lon <- lapply(all_edf, function(x) x[1])
+
+#edf_Explanitory <- lapply(all_edf, function(x) x[c(2:7)])
+
+
+```
+
+```{r}
+#all_edf <- read_csv_fn("data/clean-data/k_data/all_edf_vec.csv", proj) 
+
+
+
+par(mfrow = c(1,1))
+
+hist(unlist(all_edf), breaks = seq(0,60,1), xaxt="n")
+axis(1, at=seq(0,60,1))
+```
+
+```{r}
+### edf for lat lon smooth
+
+edf_Lat_Lon <- lapply(all_edf, function(x) x[1])
+
+#edf_Lat_Lon
+
+range(unlist(edf_Lat_Lon))
+
+hist(unlist(edf_Lat_Lon),breaks = seq(29,57,0.1), xaxt="n")
+axis(1, at=seq(29,57,1))
+
+```
+
+```{r}
+### edf for Explanitory variables
+
+edf_Explanitory <- lapply(all_edf, function(x) x[c(2:7)])
+
+#edf_Explanitory
+
+range(unlist(edf_Explanitory))
+
+hist(unlist(edf_Explanitory), breaks = seq(0,15,1), xaxt="n")
+axis(1, at=seq(0,15,1))
+
+
+  ### edf for individual explanatory variables
+v2 <- numeric(500)
+v3 <- numeric(500)
+v4 <- numeric(500)
+v5 <- numeric(500)
+v6 <- numeric(500)
+
+
+for(i in 1:length(edf_Explanitory)){
+  
+  v2[i] <- edf_Explanitory[[i]][1]
+  v3[i] <- edf_Explanitory[[i]][2]
+  v4[i] <- edf_Explanitory[[i]][3]
+  v5[i] <- edf_Explanitory[[i]][4]
+  v6[i] <- edf_Explanitory[[i]][5]
+  
+}
+
+Explanitory <- list(Depth = v2,
+                        Temp = v3,
+                        Turb = v4,
+                        Oxy = v5,
+                        Sal = v6)
+
+par(mfrow = c(3,2))
+
+for(i in 1:5){
+  hist(Explanitory[[i]], main = names(Explanitory[i]))
+}
+```
+
+
+
+
+Best model by AIC
+```{r}
+results[c(1:41),]
+
+
+mod_262 <- random_k_models$model_262
+
+gam.check(mod_262)
+
+plot(mod_262)
+```
+
+
+Best Model by BIC
+
+```{r}
+BIC_results <- results %>% arrange(BIC) 
+
+
+BIC_results[c(1:5),]
+
+
+mod_463 <- random_k_models$model_463
+
+gam.check(mod_463)
+
+plot(mod_463)
+```
+
+This looks a bit Beter
+
+
+

@@ -1,0 +1,1074 @@
+---
+title: "Model Structure"
+author: "Alex Benecke"
+date: "August 21, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r Load Packages, include=FALSE}
+require(FSA)
+require(tidyverse)
+require(dplyr)
+require(magrittr)
+require(scales)
+require(pipeR)
+require(kableExtra)
+require(mgcv)
+
+
+
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" # Specify project where data is stored 
+
+source("5_functions/load_data.R")
+
+source("5_functions/model_selection_fn.R")
+```
+
+```{r Load Data, results = 'hide'}
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj, na.strings = c(NA, "")) %>%
+  mutate(year = factor(year),
+         pres = factor(pres), 
+         month = ordered(month,
+                         levels = c("Jul", "Aug", "Sep", "Oct", "Nov") )
+         )
+
+
+str(eff3)
+headtail(eff3)
+
+strat1_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 1)
+strat2_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 2)
+
+strat1_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 1)
+strat2_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 2)
+```
+
+
+  I want to test various expinential family distributions to find out which one is the best. I think I want binomial with logit link for strata 1
+However, I have seen a wide range of distributions used for strata 2 including Tweed with identity link, and negative binomial with log link vs the gamma with a log link I've been using. 
+
+Next I want to find out if using a mean centered or standardized response variable is better than the un altered response.
+
+Finnaly, what if any transformations of explanatory variables are preferable.
+
+
+** I also need to Check if I can use by = Maturity in model so that I can fit smooths for each level of Maturity with less models. **
+
+
+### **strata 1 Note** ###
+https://www.statmethods.net/advstats/glm.html
+
+Logistic Regression
+
+Logistic regression is useful when you are predicting a binary outcome from a set of continuous predictor variables. It is frequently preferred over discriminant function analysis because of its less restrictive assumptions.
+```{r}
+# Logistic Regression
+# where F is a binary factor and
+# x1-x3 are continuous predictors
+fit <- glm(F~x1+x2+x3,data=mydata,family=binomial())
+summary(fit) # display results
+confint(fit) # 95% CI for the coefficients
+exp(coef(fit)) # exponentiated coefficients
+exp(confint(fit)) # 95% CI for exponentiated coefficients
+predict(fit, type="response") # predicted values
+residuals(fit, type="deviance") # residuals
+```
+
+You can use **anova(fit1,fit2, test="Chisq")** to compare nested models. 
+
+Additionally, cdplot(F~x, data=mydata) will display the conditional density plot of the binary outcome F on the continuous x variable.
+
+###############
+
+## Finding the best Theoretical distribution for my data
+
+see https://stats.stackexchange.com/questions/132652/how-to-determine-which-distribution-fits-my-data-best
+
+```{r Load additional packages}
+library(fitdistrplus)
+library(logspline)
+```
+```{r Isolate Response variable}
+### CPUE
+cpe <- eff3$CPUE
+
+cpe.bn <- strat2_Adult$Female$blacknose$CPUE
+cpe.bt <- strat2_Adult$Female$blacktip$CPUE
+cpe.bu <- strat2_Adult$Female$bull$CPUE
+cpe.sb <- strat2_Adult$Female$sandbar$CPUE
+cpe.sn <- strat2_Adult$Female$sharpnose$CPUE
+cpe.sp <- strat2_Adult$Female$spinner$CPUE
+cpe.ti <- strat2_Adult$Female$tiger$CPUE
+
+
+
+str(cpe)
+
+### presence absence
+pa <- eff3$pres
+str(pa)
+```
+
+
+
+### PA dist
+
+```{r}
+descdist(pa, discrete = TRUE)
+
+fit.poi <- fitdist(pa,
+                     "pois") 
+
+fit.nbiom <- fitdist(pa,
+                     "nbinom")
+
+#fit.binom <- fitdist(pa,
+#                     "binom")
+
+plot(fit.poi)
+plot(fit.nbiom)
+
+summary(fit.poi)
+summary(fit.nbiom)
+```
+
+
+
+### CPUE dist
+Lets fit A Gamma and weibull (Maybe norrmal) distribution
+
+Possible distributions 
+"norm", "lnorm", "pois", "exp", "gamma", "nbinom", "geom",
+"beta", "unif", "logis"
+
+#### Combined cpe
+```{r}
+### cpe
+descdist(cpe, discrete = FALSE)
+
+fit.weibull <- fitdist(cpe, "weibull", 
+                       method = "mle", 
+                       lower = c(0, 0),
+                       start = list(scale = 1, shape = 1))
+fit.gamma <- fitdist(cpe, "gamma", 
+                     method = "mle", 
+                     lower = c(0, 0), 
+                     start = list(scale = 1, shape = 1))
+fit.norm <- fitdist(cpe, "norm")
+
+#fit.nb <- fitdist(cpe, "nb")
+
+
+plot(fit.weibull)
+plot(fit.gamma)
+plot(fit.norm)
+
+```
+
+#### Blacknose cpe
+```{r}
+### bn
+descdist(cpe.bn, discrete = FALSE)
+
+fit.weibull.bn <- fitdist(cpe.bn, "weibull", 
+                       method = "mle")
+fit.gamma.bn <- fitdist(cpe.bn, "gamma", 
+                     method = "mle")
+fit.norm.bn <- fitdist(cpe.bn, "norm")
+
+plot(fit.weibull.bn)
+plot(fit.gamma.bn)
+plot(fit.norm.bn)
+
+summary(fit.weibull.bn)
+summary(fit.gamma.bn)
+summary(fit.norm.bn)
+```
+
+Gamma looks like the best here
+
+#### Blacktip cpe
+```{r}
+descdist(cpe.bt, discrete = FALSE) ### looks like gamma ?or maybe weible?
+
+fit.weibull.bt <- fitdist(cpe.bt, "weibull", 
+                       method = "mle")
+fit.gamma.bt <- fitdist(cpe.bt, "gamma", 
+                     method = "mle")
+fit.norm.bt <- fitdist(cpe.bt, "norm")
+
+plot(fit.weibull.bt)
+plot(fit.gamma.bt)
+plot(fit.norm.bt)
+
+summary(fit.weibull.bt)
+summary(fit.gamma.bt)
+summary(fit.norm.bt)
+
+```
+
+Gamma looks like the best here
+
+#### Bull cpe
+```{r}
+descdist(cpe.bu, discrete = FALSE) ### maybe lognormal
+
+fit.weibull.bu <- fitdist(cpe.bu, "weibull", 
+                       method = "mle")
+fit.lnorm.bu <- fitdist(cpe.bu, "lnorm")
+
+fit.gamma.bu <- fitdist(cpe.bu, "gamma", 
+                     method = "mle")
+fit.norm.bu <- fitdist(cpe.bu, "norm")
+
+plot(fit.weibull.bu)
+plot(fit.lnorm.bu)
+plot(fit.gamma.bu)
+plot(fit.norm.bu)
+
+summary(fit.weibull.bu)
+summary(fit.lnorm.bu)
+summary(fit.gamma.bu)
+summary(fit.norm.bu)
+
+```
+Best is normal then weibull, and gamma
+
+#### sandbar cpe
+```{r}
+descdist(cpe.sb, discrete = FALSE)
+
+fit.weibull.sb <- fitdist(cpe.sb, "weibull", 
+                       method = "mle")
+fit.gamma.sb <- fitdist(cpe.sb, "gamma", 
+                     method = "mle")
+fit.norm.sb <- fitdist(cpe.sb, "norm")
+
+plot(fit.weibull.sb)
+plot(fit.gamma.sb)
+plot(fit.norm.sb)
+
+summary(fit.weibull.sb)
+summary(fit.gamma.sb)
+summary(fit.norm.sb)
+```
+Gamma looks like the best here
+
+#### sharpnose cpe
+```{r}
+descdist(cpe.sn, discrete = FALSE)
+
+fit.weibull.sn <- fitdist(cpe.sn, "weibull", 
+                       method = "mle")
+fit.gamma.sn <- fitdist(cpe.sn, "gamma", 
+                     method = "mle")
+fit.norm.sn <- fitdist(cpe.sn, "norm")
+fit.exp.sn <- fitdist(cpe.sn, "exp")
+
+plot(fit.weibull.sn)
+plot(fit.gamma.sn)
+plot(fit.norm.sn)
+plot(fit.exp.sn)
+
+summary(fit.weibull.sn)
+summary(fit.gamma.sn)
+summary(fit.norm.sn)
+summary(fit.exp.sn)
+
+```
+Weibull looks best here Gamma is close
+
+
+#### spinner cpe
+```{r}
+descdist(cpe.sp, discrete = FALSE)
+
+fit.weibull.sp <- fitdist(cpe.sp, "weibull", 
+                       method = "mle")
+fit.gamma.sp <- fitdist(cpe.sp, "gamma", 
+                     method = "mle")
+fit.norm.sp <- fitdist(cpe.sp, "norm")
+fit.exp.sp <- fitdist(cpe.sp, "exp")
+
+plot(fit.weibull.sp)
+plot(fit.gamma.sp)
+plot(fit.norm.sp)
+plot(fit.exp.sp)
+
+summary(fit.weibull.sp)
+summary(fit.gamma.sp)
+summary(fit.norm.sp)
+summary(fit.exp.sp)
+
+```
+Gamma looks like the best here
+
+#### tiger cpe
+```{r}
+descdist(cpe.ti, discrete = FALSE)
+
+fit.weibull.ti <- fitdist(cpe.ti, "weibull", 
+                       method = "mle")
+fit.gamma.ti <- fitdist(cpe.ti, "gamma", 
+                     method = "mle")
+fit.norm.ti <- fitdist(cpe.ti, "norm")
+
+plot(fit.weibull.ti)
+plot(fit.gamma.ti)
+plot(fit.norm.ti)
+
+
+summary(fit.weibull.ti)
+summary(fit.gamma.ti)
+summary(fit.norm.ti)
+
+
+```
+All very close normal looks best but really no difference
+
+I expect the CPUE to have the same distribution for all species and so far Gamma seems to be the leader.
+
+
+
+
+
+
+### Strata 1 Adult Female
+```{r}
+sn.S1FA.dat <- strat1_Adult$Female$sharpnose
+
+
+system.time(
+binomial.fit <- gam(pres ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 + 
+                      s(year, bs = "re"),
+                    data = sn.S1FA.dat,
+                    family = binomial(link = logit))
+)
+```
+   user  system elapsed 
+  19.06    0.81   20.14 
+  
+```{r}
+summary(binomial.fit)
+
+AIC(binomial.fit)
+
+par(mfrow = c(2,2))
+gam.check(binomial.fit)
+
+```
+
+
+### Strata 2 Adult Female
+```{r}
+s2.response <- "(CPUE + 1)"
+
+s2.smooth.terms <- c("s(startlon, startlat, k = ( k_i[[i]]['k_0','Lat_Lon'] + 35))",
+                     "s(I(startdepth^0.25), k = k_i[[i]]['k_0', 'Root_Dep'])",
+                      "s(tempbotm, k = k_i[[i]]['k_0', 'Temp'])",
+                      "s(turbbotm, k = k_i[[i]]['k_0', 'Turb'])",
+                      "s(oxybotm, k = k_i[[i]]['k_0', 'Oxy'])",
+                      "s(salbotm, k = k_i[[i]]['k_0', 'Sal'])",
+                      "s(Dis.to.SHORE, k = k_i[[i]]['k_0', 'Dis'])",
+                     "bottype4")
+
+s2.smooth.terms <- c("s(startlon, startlat, k = 40)",
+                     "s(I(startdepth^0.25), k = 5)",
+                      "s(tempbotm, k = 5)",
+                      "s(turbbotm, k = 5)",
+                      "s(oxybotm, k = 5)",
+                      "s(salbotm, k = 5)",
+                      "s(Dis.to.SHORE, k = 5)",
+                     "bottype4")
+
+s2.re.var <- "s(year, bs = 're')"  
+  
+
+s2.smooth_names <- c("Lat_Lon","Root_Dep", "Temp", "Turb", "Oxy", "Sal", "Dis", "Bottm")
+
+s2.re.smooth.name <- "yr"
+
+s2.family <- Gamma(link = log) 
+
+sn.FA.dat <- strat2_Adult$Female$sharpnose
+```
+
+#### Gamma Dist
+```{r}
+system.time(
+gamma.fit <- gam((CPUE + 1) ~ s(startlon, startlat, k = 40) +
+                   s(startdepth, k = 5) +
+                   s(tempbotm, k = 5) +
+                   s(turbbotm, k = 5) +
+                   s(oxybotm, k = 5) +
+                   s(salbotm, k = 5) +
+                   s(Dis.to.SHORE, k = 5) +
+                   bottype4 + 
+                   s(year, bs = "re"),
+                 data = sn.FA.dat,
+                 family = Gamma(link = log))
+)
+
+```
+   user  system elapsed 
+   2.73    0.05    2.84 
+
+
+### Tweedie Dist
+```{r}
+system.time(
+  
+  twd.fit <- gam((CPUE + 1) ~ s(startlon, startlat, k = 40) +
+                   s(startdepth, k = 5) +
+                   s(tempbotm, k = 5) +
+                   s(turbbotm, k = 5) +
+                   s(oxybotm, k = 5) +
+                   s(salbotm, k = 5) +
+                   s(Dis.to.SHORE, k = 5) +
+                   bottype4 + 
+                   s(year, bs = "re"),
+                 data = sn.FA.dat,
+                 family = tw(link = "identity"))
+  
+)
+```
+   user  system elapsed 
+  19.56    0.05   19.75 
+
+
+### Negbinomial
+
+try *nb*
+
+```{r, eval = FALSE}
+system.time(
+  
+  nbnm.fit <- gam((CPUE + 1) ~ s(startlon, startlat, k = 40) +
+                   s(startdepth, k = 5) +
+                   s(tempbotm, k = 5) +
+                   s(turbbotm, k = 5) +
+                   s(oxybotm, k = 5) +
+                   s(salbotm, k = 5) +
+                   s(Dis.to.SHORE, k = 5) +
+                   bottype4 + 
+                   s(year, bs = "re"),
+                 data = sn.FA.dat,
+                 family = negative.binomial(link = log))
+  
+)
+```
+
+
+### Compare model fits
+
+```{r}
+summary(gamma.fit) ###
+summary(twd.fit)
+
+AIC(gamma.fit)
+AIC(twd.fit)
+
+par(mfrow = c(2,2))
+gam.check(gamma.fit)
+
+gam.check(twd.fit)
+```
+
+
+I think I'll stick to Gamma
+
+
+
+## Using *'by = maturity'* in smooths
+```{r}
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj, na.strings = c(NA, "")) %>%
+  mutate(year = factor(year, ordered = TRUE),
+         pres = factor(pres), 
+         month = ordered(month,
+                         levels = c("Jul", "Aug", "Sep", "Oct", "Nov") )
+         )
+
+
+str(eff3)
+headtail(eff3)
+
+strat1 <- load_data(data = eff3, strata = 1)
+str(strat1$Female$sharpnose)
+
+strat2 <- load_data(data = eff3, strata = 2)
+str(strat2$Female$sharpnose)
+
+
+sn_s2M <- strat2$Male$sharpnose %>% subset( maturity == "A" | maturity == "J") %>% droplevels()
+str(sn_s2M)
+
+sn_s2MA<- strat2$Male$sharpnose %>% subset( maturity == "A" ) %>% droplevels()
+str(sn_s2MA)
+
+
+sn_s2MJ <- strat2$Male$sharpnose %>% subset( maturity == "J" ) %>% droplevels()
+str(sn_s2MJ)
+
+
+```
+
+
+I want to see what my output will be if I include a 'by = maturity' term in the smooths for my explanatory variables. Since maturity is a factor variable I will need to include it as a main effect.
+
+```{r Fit GAM by maturity Male sn S2}
+system.time(
+fit_by_mat_M <- gam((CPUE + 1) ~ s(startlon, startlat, k = 40, by = maturity) +
+                      s(startdepth, k = 5, by = maturity) +
+                      s(tempbotm, k = 5, by = maturity) +
+                      s(turbbotm, k = 5, by = maturity) +
+                      s(oxybotm, k = 5, by = maturity) +
+                      s(salbotm, k = 5, by = maturity) +
+                      s(Dis.to.SHORE, k = 5, by = maturity) +
+                      bottype4 +
+                      maturity +
+                      s(year, bs = "re", by = maturity),
+                    data = sn_s2M,
+                    family = Gamma(link = log))
+)
+```
+   user  system elapsed 
+  39.13    0.77   40.52 
+  
+  **just Adult and Juveniles**
+   user  system elapsed 
+  15.76    0.38   16.27 
+
+```{r}
+fit_by_mat_M
+
+summary(fit_by_mat_M)
+
+par(mfrow = c(2,2))
+gam.check(fit_by_mat_M)
+```
+```{r}
+plot(fit_by_mat_M, 
+     pages = 1)
+
+par(mfrow = c(2,2))
+par(mfrow = c(1,1))
+
+plot(fit_by_mat_M,
+     select = 1)
+
+plot(fit_by_mat_M,
+     select = 2)
+
+plot(fit_by_mat_M,
+     select = 3)
+
+
+```
+
+
+
+Certainly seems to reduce the amount of models I have to deal with but may pose a problem if a term is significant for one level of maturity but not another.
+
+
+
+```{r Fit GAM by maturity Male Adult sn S2}
+system.time(
+fit_by_mat_MA <- gam((CPUE + 1) ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2MA,
+                    family = Gamma(link = log))
+)
+```
+
+   user  system elapsed 
+   2.53    0.06    2.62
+
+```{r Fit GAM by maturity Male Juvenile sn S2}
+system.time(
+fit_by_mat_MJ <- gam((CPUE + 1) ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2MJ,
+                    family = Gamma(link = log))
+)
+```
+   user  system elapsed 
+   0.90    0.00    0.95
+
+```{r}
+AIC(fit_by_mat_M, fit_by_mat_MA, fit_by_mat_MJ) ### maybe not super informative
+
+summary(fit_by_mat_M) ### 44.2%
+summary(fit_by_mat_MA) ### 35.2%
+summary(fit_by_mat_MJ) ### 35.1%
+
+
+par(mfrow = c(2,2))
+### lat Lon
+plot(fit_by_mat_M, select = 1)
+plot(fit_by_mat_M, select = 2)
+
+plot(fit_by_mat_MA, select = 1)
+plot(fit_by_mat_MJ, select = 1)
+
+### depth
+par(mfrow = c(2,2))
+
+plot(fit_by_mat_M, select = 3)
+plot(fit_by_mat_M, select = 4)
+
+plot(fit_by_mat_MA, select = 2)
+plot(fit_by_mat_MJ, select = 2)
+
+### salinity
+par(mfrow = c(2,2))
+
+plot(fit_by_mat_M, select = 11)
+abline(h = 0, col = "red", lty = 3)
+plot(fit_by_mat_M, select = 12)
+abline(h = 0, col = "red", lty = 3)
+
+plot(fit_by_mat_MA, select = 6)
+abline(h = 0, col = "red", lty = 3)
+plot(fit_by_mat_MJ, select = 6)
+abline(h = 0, col = "red", lty = 3)
+```
+
+I think it would be best to fit the models seperatly for Adults and Juveniles. Juveniles seem to be fit very differently when included with 'by = matyrity' rather than being fit on their own. Also as you can see for **salinity** the smooth is important for Adults but not Juveniles. I would want to remove the term from the juvenile model.(Although I may be anle to do this with select = TRUE this would slow down the computation significantly.)
+
+
+
+## Link functions
+
+https://stats.stackexchange.com/questions/141181/glm-verifying-a-choice-of-distribution-and-link-function#141221
+
+Link functions for Gamma are, inverse, identity and log.
+
+### Log Link
+
+```{r log link}
+system.time(
+log_sn_MJ <- gam((CPUE + 1) ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2MA,
+                    family = Gamma(link = log))
+)
+```
+   user  system elapsed 
+   2.60    0.00    2.65
+   
+```{r log2 link}
+system.time(
+log2_sn_MJ <- gam(CPUE ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2MA,
+                    family = Gamma(link = log))
+)
+```
+   user  system elapsed 
+   0.85    0.00    0.89    
+
+### Inverse Link 
+ 
+```{r inverse link}
+system.time(
+inv_sn_MJ <- gam((CPUE + 1) ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2MA,
+                    family = Gamma(link = inverse))
+)
+```
+   user  system elapsed 
+   0.82    0.00    0.85 
+
+```{r inverse2 link}
+system.time(
+inv2_sn_MJ <- gam(CPUE ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2MA,
+                    family = Gamma(link = inverse))
+)
+```
+   user  system elapsed 
+   0.78    0.00    0.81 
+ 
+### Identity Link   
+   
+```{r identity link}
+system.time(
+id_sn_MJ <- gam((CPUE + 1) ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2MA,
+                    family = Gamma(link = identity))
+)
+```
+   user  system elapsed 
+   3.84    0.00    3.89 
+   
+Warning messages:
+1: In log(ifelse(y == 0, 1, y/mu)) : NaNs produced
+2: Step size truncated due to divergence 
+3: In log(ifelse(y == 0, 1, y/mu)) : NaNs produced
+4: Step size truncated due to divergence
+
+```{r identity2 link}
+system.time(
+id2_sn_MJ <- gam(CPUE ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2MA,
+                    family = Gamma(link = identity))
+)
+
+```
+   user  system elapsed 
+   4.11    0.00    4.13 
+   
+Warning messages:
+1: In log(ifelse(y == 0, 1, y/mu)) : NaNs produced
+2: Step size truncated due to divergence 
+3: In log(ifelse(y == 0, 1, y/mu)) : NaNs produced
+4: In log(ifelse(y == 0, 1, y/mu)) : NaNs produced
+5: In log(ifelse(y == 0, 1, y/mu)) : NaNs produced
+6: Step size truncated due to divergence 
+7: In log(ifelse(y == 0, 1, y/mu)) : NaNs produced
+8: In log(ifelse(y == 0, 1, y/mu)) : NaNs produced
+
+### Comparing Link Functions
+
+```{r}
+AIC(log_sn_MJ, inv_sn_MJ, id_sn_MJ)
+AIC(log2_sn_MJ, inv2_sn_MJ, id2_sn_MJ)
+
+anova.gam(log_sn_MJ, inv_sn_MJ, id_sn_MJ, test = "F")
+anova.gam(log2_sn_MJ, inv2_sn_MJ, id2_sn_MJ, test = "F")
+
+```
+
+Looks like the inverse link function has the lowest AIC followed by log then identity. AIC is lower when I dont add 1 to CPUE which I no longer have to do since I removed the zeros.
+
+```{r}
+summary(log2_sn_MJ)
+summary(inv2_sn_MJ)
+summary(id2_sn_MJ)
+```
+
+The inverse link has the Lowest GCV and Highest R^2 and percent Deviance Explained.
+
+```{r}
+par(mfrow = c(2,2))
+
+gam.check(log2_sn_MJ)
+gam.check(inv2_sn_MJ)
+gam.check(id2_sn_MJ)
+```
+
+I think the plot of Response vs Fitted Values looks better with the log link so I'm going to stick with that for now.
+
+### Strata 1
+
+the binomial family the links logit, probit, cauchit, (corresponding to logistic, normal and Cauchy CDFs respectively) log and cloglog (complementary log-log
+
+```{r}
+sn_s2F <- strat2$Female$sharpnose %>% subset( maturity == "A" | maturity == "J" ) %>% droplevels()
+str(sn_s2F)
+
+sn_s2FA <- strat2$Female$sharpnose %>% subset( maturity == "A" ) %>% droplevels()
+str(sn_s2FA)
+
+sn_s2FJ <- strat2$Female$sharpnose %>% subset( maturity == "J" ) %>% droplevels()
+str(sn_s2FJ)
+
+```
+
+### logit
+```{r logit link}
+system.time(
+logit_sn_FA <- gam(pres ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2FA,
+                    family = binomial(link = logit))
+)
+```
+   user  system elapsed 
+   0.38    0.00    0.39 
+
+
+### probit
+```{r probit link}
+system.time(
+probit_sn_FA <- gam(pres ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2FA,
+                    family = binomial(link = probit))
+)
+```
+   user  system elapsed 
+   0.40    0.00    0.41 
+
+### cauchit
+```{r cauchit link}
+system.time(
+cauch_sn_FA <- gam(pres ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2FA,
+                    family = binomial(link = cauchit))
+)
+```
+   user  system elapsed 
+   0.95    0.02    1.03 
+
+### log
+```{r log link}
+system.time(
+log_sn_FA <- gam(pres ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2FA,
+                    family = binomial(link = log))
+)
+```
+   user  system elapsed 
+   0.41    0.00    0.40 
+   
+### cloglog   
+```{r cloglog link}
+system.time(
+cloglog_sn_FA <- gam(pres ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2FA,
+                    family = binomial(link = cloglog))
+)
+```
+   user  system elapsed 
+   0.41    0.00    0.40
+
+### compare strat 1 link models
+```{r}
+anova.gam(logit_sn_FA, probit_sn_FA, cauch_sn_FA, log_sn_FA, cloglog_sn_FA, test = "Chisq")
+
+AIC(logit_sn_FA, probit_sn_FA, cauch_sn_FA, log_sn_FA, cloglog_sn_FA)
+```
+```{r}
+summary(logit_sn_FA)
+summary(probit_sn_FA)
+summary(cauch_sn_FA)
+summary(log_sn_FA)
+summary(cloglog_sn_FA)
+
+
+gam.check(logit_sn_FA)
+gam.check(probit_sn_FA)
+gam.check(cauch_sn_FA)
+gam.check(log_sn_FA)
+gam.check(cloglog_sn_FA)
+
+
+```
+
+
+Ya IDK i'll come back to this
+
+
+
+## GCV vs ML vs REML
+
+family.mgcv {mgcv}
+
+
+smoothing parameter estimation by "REML" or "ML" (the latter does not integrate the unpenalized and parameteric effects out of the marginal likelihood optimized for the smoothing parameters)
+
+```{r inverse2 link}
+system.time(
+default_sn_MJ <- gam(CPUE ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2MA,
+                    family = Gamma(link = inverse))
+)
+```
+   user  system elapsed 
+   1.98    0.04    2.04 
+
+```{r ML link}
+system.time(
+ML_sn_MJ <- gam(CPUE ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2MA,
+                    family = Gamma(link = inverse),
+                method = "ML")
+)
+```
+   user  system elapsed 
+   2.02    0.02    2.06 
+Warning messages:
+1: In log(ifelse(y == 0, 1, y/mu)) : NaNs produced
+2: Step size truncated due to divergence 
+3: In log(ifelse(y == 0, 1, y/mu)) : NaNs produced
+4: Step size truncated due to divergence 
+
+```{r REML link}
+system.time(
+REML_sn_MJ <- gam(CPUE ~ s(startlon, startlat, k = 40) +
+                      s(startdepth, k = 5) +
+                      s(tempbotm, k = 5) +
+                      s(turbbotm, k = 5) +
+                      s(oxybotm, k = 5) +
+                      s(salbotm, k = 5) +
+                      s(Dis.to.SHORE, k = 5) +
+                      bottype4 +
+                      s(year, bs = "re"),
+                    data = sn_s2MA,
+                    family = Gamma(link = inverse),
+                  method = "REML")
+)
+```
+   user  system elapsed 
+   3.10    0.08    3.20 
+Warning messages:
+1: In log(ifelse(y == 0, 1, y/mu)) : NaNs produced
+2: Step size truncated due to divergence 
+
+```{r}
+anova.gam(default_sn_MJ, ML_sn_MJ, REML_sn_MJ, test = "F")
+
+AIC(default_sn_MJ, ML_sn_MJ, REML_sn_MJ)
+```
+```{r}
+summary(default_sn_MJ)
+summary(ML_sn_MJ)
+summary(REML_sn_MJ)
+
+
+gam.check(default_sn_MJ)
+gam.check(ML_sn_MJ)
+gam.check(REML_sn_MJ)
+```
+
+Just goint to stich to default
+
+
+
+
+
+
+
+
+
+
+
+
