@@ -15,18 +15,22 @@ library(magrittr)
 
 source("5_functions/load_data.R")
 
-#source("5_functions/dropbox_fn.R") # For interacting with dropbox
-#proj = "shark" # Specify project where data is stored 
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" # Specify project where data is stored 
 
 source("5_functions/model_selection_fn.R")
 ```
 
 ```{r load data}
-#eff3 <- read_csv_fn( "data/raw-data/CPUE3.csv", proj)
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj, na.strings = c(NA,"")) %>%
+  subset(common == "Blacknose" | common == "Blacktip" | common == "Sharpnose") %>%
+  droplevels() %>%
+  na.omit()
 
-eff3 <- read.csv("data/raw-data/CPUE3.csv", na.strings = c(NA, "")) %>%
-  mutate(year = factor(year), pres = factor(pres))
+#eff3 <- read.csv("data/raw-data/CPUE3.csv", na.strings = c(NA, "")) %>%
+#  mutate(year = factor(year), pres = factor(pres))
 str(eff3)
+
 ```
 
 
@@ -34,23 +38,25 @@ str(eff3)
 ```{r Setup Strata 1}
 s1.response <- "pres"
 
-s1.smooth.terms <- c("s(startlon, startlat, k = k_i[[i]]['k_0','Lat_Lon'] + 35)",
-                     "s(I(startdepth^0.25), k = k_i[[i]]['k_0', 'Root_Dep'])",
+smooth.terms <- c("s(startdepth, k = k_i[[i]]['k_0', 'Dep'])",
                      "s(tempbotm, k = k_i[[i]]['k_0', 'Temp'])",
                      "s(turbbotm, k = k_i[[i]]['k_0', 'Turb'])",
                      "s(oxybotm, k = k_i[[i]]['k_0', 'Oxy'])",
                      "s(salbotm, k = k_i[[i]]['k_0', 'Sal'])",
-                     "s(Dis.to.SHORE, k = k_i[[i]]['k_0', 'Dis'])",
+                     "s(Dis.to.Shore, k = k_i[[i]]['k_0', 'Dis'])",
                      "bottype4")
 
-s1.re.var <- "s(year, bs = 're')"  
+constant_term = "s(startlon, startlat, k = k_i[[i]]['k_0', 'LatLon'] + 45)"
+
+re_term <- "s(year, bs = 're')"
   
 
-s1.smooth_names <- c("Lat_Lon","Root_Dep", "Temp", "Turb", "Oxy", "Sal", "Dis", "Botom")
+smooth_names <- c("LatLon","Dep", "Temp", "Turb", "Oxy", "Sal", "Dis", "Bottype")
 
-s1.re.smooth.name <- "yr"
 
 s1.family <- binomial(link = logit) 
+
+sp <- c("bn", "bt", "sn")
 
 ```
 
@@ -63,13 +69,13 @@ Adult_S1 <- load_data(data = eff3[eff3$maturity == "A",] %>% droplevels(), strat
 Adult_Female_S1 <- Adult_S1$Female
 
 str(Adult_Female_S1$blacknose)
+str(Adult_Female_S1$blacktip)
+str(Adult_Female_S1$sharpnose)
 ```
 
 #### Fitting All S1 Adult Female GAM Models
 
 ```{r Fitting All S1_FA GAMs}
-
-sp <- c("bn", "bt", "bu", "sb", "sn", "sp", "ti")
 
 for(i in 1:length(Adult_Female_S1)){
   
@@ -81,15 +87,15 @@ for(i in 1:length(Adult_Female_S1)){
                                 
                                 response = s1.response,
                             
-                                smooth_terms = s1.smooth.terms,
+                                smooth_terms = smooth.terms,
+                                
+                                constant_term = constant_term,
+                                
+                                re_term = re_term,
                             
-                                smooth_names = s1.smooth_names,
-                            
-                                rand_eff_smooth = s1.re.var,
+                                smooth_names = smooth_names,
                             
                                 family = s1.family,
-                            
-                                in_parallel = FALSE,
                             
                                 est_k = TRUE)) 
            
@@ -98,57 +104,20 @@ for(i in 1:length(Adult_Female_S1)){
   
 }
 
-save( bn_s1_FA, file = "output/output_Gam/strat1/Female_Adult/bn_s1_FA.rda"   )
+save( bn_s1_FA, file = "output/output_GAM/strat1/Female/Adult/bn_s1_FA.rda"   )
 
-save( bt_s1_FA, file = "output/output_Gam/strat1/Female_Adult/bt_s1_FA.rda"   )
+save( bt_s1_FA, file = "output/output_GAM/strat1/Female/Adult/bt_s1_FA.rda"   )
 
-save( bu_s1_FA, file = "output/output_Gam/strat1/Female_Adult/bu_s1_FA.rda"   )
-
-save( sb_s1_FA, file = "output/output_Gam/strat1/Female_Adult/sb_s1_FA.rda"   )
-
-save( sn_s1_FA, file = "output/output_Gam/strat1/Female_Adult/sn_s1_FA.rda"   )
-
-save( sp_s1_FA, file = "output/output_Gam/strat1/Female_Adult/sp_s1_FA.rda"   )
-
-save( ti_s1_FA, file = "output/output_Gam/strat1/Female_Adult/ti_s1_FA.rda"   )
+save( sn_s1_FA, file = "output/output_GAM/strat1/Female/Adult/sn_s1_FA.rda"   )
 
 
 
 time_s1_FA <- list(time_bn_s1_FA = time_bn_s1_FA,
                    time_bt_s1_FA = time_bt_s1_FA,
-                   time_bu_s1_FA = time_bu_s1_FA,
-                   time_sb_s1_FA = time_sb_s1_FA,
-                   time_sn_s1_FA = time_sn_s1_FA,
-                   time_sp_s1_FA = time_sp_s1_FA,
-                   time_ti_s1_FA = time_ti_s1_FA)
+                   time_sn_s1_FA = time_sn_s1_FA)
 
 
-save(time_s1_FA, file = "output/output_GAM/strat1/Female_Adult/time_s1_FA.rda")
-
-```
-
-#### Blacknose S1_FA
-```{r Blacknose S1 FA GAM Fit}
-time_bn_s1_FA <- system.time(
-  
-  bn_s1_FA <- gam_select_fn(data = Adult_Female_S1$blacknose,
-                            
-                            response = s1.response,
-                            
-                            smooth_terms = s1.smooth.terms,
-                            
-                            smooth_names = s1.smooth_names,
-                            
-                            rand_eff_smooth = s1.re.var,
-                            
-                            family = s1.family,
-                            
-                            in_parallel = FALSE,
-                            
-                            est_k = TRUE)
-)
-
-save(bn_s1_FA, file = "output/output_Gam/bn_s1_FA.rda")
+save(time_s1_FA, file = "output/output_GAM/strat1/Female/Adult/time_s1_FA.rda")
 
 ```
 
@@ -166,8 +135,6 @@ str(Juvenile_Female_S1$blacknose)
 
 ```{r Fitting All S1_FJ GAMs}
 
-sp <- c("bn", "bt", "bu", "sb", "sn", "sp", "ti")
-
 for(i in 1:length(Juvenile_Female_S1)){
   
   assign( paste0( "time_", sp[i], "_s1_FJ" ),
@@ -178,15 +145,15 @@ for(i in 1:length(Juvenile_Female_S1)){
                                 
                                 response = s1.response,
                             
-                                smooth_terms = s1.smooth.terms,
+                                smooth_terms = smooth.terms,
+                                
+                                constant_term = constant_term,
+                                
+                                re_term = re_term,
                             
-                                smooth_names = s1.smooth_names,
-                            
-                                rand_eff_smooth = s1.re.var,
+                                smooth_names = smooth_names,
                             
                                 family = s1.family,
-                            
-                                in_parallel = FALSE,
                             
                                 est_k = TRUE)) 
            
@@ -194,33 +161,21 @@ for(i in 1:length(Juvenile_Female_S1)){
          )
 }
 
-save( bn_s1_FJ, file = "output/output_Gam/strat1/Female_Juvenile/bn_s1_FJ.rda"   )
+save( bn_s1_FJ, file = "output/output_GAM/strat1/Female/Juvenile/bn_s1_FJ.rda"   )
 
-save( bt_s1_FJ, file = "output/output_Gam/strat1/Female_Juvenile/bt_s1_FJ.rda"   )
+save( bt_s1_FJ, file = "output/output_GAM/strat1/Female/Juvenile/bt_s1_FJ.rda"   )
 
-save( bu_s1_FJ, file = "output/output_Gam/strat1/Female_Juvenile/bu_s1_FJ.rda"   )
-
-save( sb_s1_FJ, file = "output/output_Gam/strat1/Female_Juvenile/sb_s1_FJ.rda"   )
-
-save( sn_s1_FJ, file = "output/output_Gam/strat1/Female_Juvenile/sn_s1_FJ.rda"   )
-
-save( sp_s1_FJ, file = "output/output_Gam/strat1/Female_Juvenile/sp_s1_FJ.rda"   )
-
-save( ti_s1_FJ, file = "output/output_Gam/strat1/Female_Juvenile/ti_s1_FJ.rda"   )
+save( sn_s1_FJ, file = "output/output_GAM/strat1/Female/Juvenile/sn_s1_FJ.rda"   )
 
 
 
 
 time_s1_FJ <- list(time_bn_s1_FJ = time_bn_s1_FJ,
                    time_bt_s1_FJ = time_bt_s1_FJ,
-                   time_bu_s1_FJ = time_bu_s1_FJ,
-                   time_sb_s1_FJ = time_sb_s1_FJ,
-                   time_sn_s1_FJ = time_sn_s1_FJ,
-                   time_sp_s1_FJ = time_sp_s1_FJ,
-                   time_ti_s1_FJ = time_ti_s1_FJ)
+                   time_sn_s1_FJ = time_sn_s1_FJ)
 
 
-save(time_s1_FJ, file = "output/output_GAM/strat1/Female_Juvenile/time_s1_FJ.rda")
+save(time_s1_FJ, file = "output/output_GAM/strat1/Female/Juvenile/time_s1_FJ.rda")
 ```
 
 
@@ -236,8 +191,6 @@ str(Adult_Male_S1$blacknose)
 
 ```{r Fitting All S1_MA GAMs}
 
-sp <- c("bn", "bt", "bu", "sb", "sn", "sp", "ti")
-
 for(i in 1:length(Adult_Male_S1)){
   
   assign( paste0( "time_", sp[i], "_s1_MA" ),
@@ -248,15 +201,15 @@ for(i in 1:length(Adult_Male_S1)){
                                 
                                 response = s1.response,
                             
-                                smooth_terms = s1.smooth.terms,
+                                smooth_terms = smooth.terms,
+                                
+                                constant_term = constant_term,
+                                
+                                re_term = re_term,
                             
-                                smooth_names = s1.smooth_names,
-                            
-                                rand_eff_smooth = s1.re.var,
+                                smooth_names = smooth_names,
                             
                                 family = s1.family,
-                            
-                                in_parallel = FALSE,
                             
                                 est_k = TRUE)) 
            
@@ -264,33 +217,21 @@ for(i in 1:length(Adult_Male_S1)){
          )
 }
 
-save( bn_s1_MA, file = "output/output_Gam/strat1/Male_Adult/bn_s1_MA.rda"   )
+save( bn_s1_MA, file = "output/output_GAM/strat1/Male/Adult/bn_s1_MA.rda"   )
 
-save( bt_s1_MA, file = "output/output_Gam/strat1/Male_Adult/bt_s1_MA.rda"   )
+save( bt_s1_MA, file = "output/output_GAM/strat1/Male/Adult/bt_s1_MA.rda"   )
 
-save( bu_s1_MA, file = "output/output_Gam/strat1/Male_Adult/bu_s1_MA.rda"   )
-
-save( sb_s1_MA, file = "output/output_Gam/strat1/Male_Adult/sb_s1_MA.rda"   )
-
-save( sn_s1_MA, file = "output/output_Gam/strat1/Male_Adult/sn_s1_MA.rda"   )
-
-save( sp_s1_MA, file = "output/output_Gam/strat1/Male_Adult/sp_s1_MA.rda"   )
-
-save( ti_s1_MA, file = "output/output_Gam/strat1/Male_Adult/ti_s1_MA.rda"   )
+save( sn_s1_MA, file = "output/output_GAM/strat1/Male/Adult/sn_s1_MA.rda"   )
 
 
 
 
 time_s1_MA <- list(time_bn_s1_MA = time_bn_s1_MA,
                    time_bt_s1_MA = time_bt_s1_MA,
-                   time_bu_s1_MA = time_bu_s1_MA,
-                   time_sb_s1_MA = time_sb_s1_MA,
-                   time_sn_s1_MA = time_sn_s1_MA,
-                   time_sp_s1_MA = time_sp_s1_MA,
-                   time_ti_s1_MA = time_ti_s1_MA)
+                   time_sn_s1_MA = time_sn_s1_MA)
 
 
-save(time_s1_MA, file = "output/output_GAM/strat1/Male_Adult/time_s1_MA.rda")
+save(time_s1_MA, file = "output/output_GAM/strat1/Male/Adult/time_s1_MA.rda")
 ```
 
 
@@ -306,8 +247,6 @@ str(Juvenile_Male_S1$blacknose)
 
 ```{r Fitting All S1_MJ GAMs}
 
-sp <- c("bn", "bt", "bu", "sb", "sn", "sp", "ti")
-
 for(i in 1:length(Juvenile_Male_S1)){
   
   assign( paste0( "time_", sp[i], "_s1_MJ" ),
@@ -318,15 +257,15 @@ for(i in 1:length(Juvenile_Male_S1)){
                                 
                                 response = s1.response,
                             
-                                smooth_terms = s1.smooth.terms,
+                                smooth_terms = smooth.terms,
+                                
+                                constant_term = constant_term,
+                                
+                                re_term = re_term,
                             
-                                smooth_names = s1.smooth_names,
-                            
-                                rand_eff_smooth = s1.re.var,
+                                smooth_names = smooth_names,
                             
                                 family = s1.family,
-                            
-                                in_parallel = FALSE,
                             
                                 est_k = TRUE)) 
            
@@ -334,32 +273,20 @@ for(i in 1:length(Juvenile_Male_S1)){
          )
 }
 
-save( bn_s1_MJ, file = "output/output_Gam/strat1/Male_Juvenile/bn_s1_MJ.rda"   )
+save( bn_s1_MJ, file = "output/output_GAM/strat1/Male/Juvenile/bn_s1_MJ.rda"   )
 
-save( bt_s1_MJ, file = "output/output_Gam/strat1/Male_Juvenile/bt_s1_MJ.rda"   )
+save( bt_s1_MJ, file = "output/output_GAM/strat1/Male/Juvenile/bt_s1_MJ.rda"   )
 
-save( bu_s1_MJ, file = "output/output_Gam/strat1/Male_Juvenile/bu_s1_MJ.rda"   )
-
-save( sb_s1_MJ, file = "output/output_Gam/strat1/Male_Juvenile/sb_s1_MJ.rda"   )
-
-save( sn_s1_MJ, file = "output/output_Gam/strat1/Male_Juvenile/sn_s1_MJ.rda"   )
-
-save( sp_s1_MJ, file = "output/output_Gam/strat1/Male_Juvenile/sp_s1_MJ.rda"   )
-
-save( ti_s1_MJ, file = "output/output_Gam/strat1/Male_Juvenile/ti_s1_MJ.rda"   )
+save( sn_s1_MJ, file = "output/output_GAM/strat1/Male/Juvenile/sn_s1_MJ.rda"   )
 
 
 
 time_s1_MJ <- list(time_bn_s1_MJ = time_bn_s1_MJ,
                    time_bt_s1_MJ = time_bt_s1_MJ,
-                   time_bu_s1_MJ = time_bu_s1_MJ,
-                   time_sb_s1_MJ = time_sb_s1_MJ,
-                   time_sn_s1_MJ = time_sn_s1_MJ,
-                   time_sp_s1_MJ = time_sp_s1_MJ,
-                   time_ti_s1_MJ = time_ti_s1_MJ)
+                   time_sn_s1_MJ = time_sn_s1_MJ)
 
 
-save(time_s1_MJ, file = "output/output_GAM/strat1/Male_Juvenile/time_s1_MJ.rda")
+save(time_s1_MJ, file = "output/output_GAM/strat1/Male/Juvenile/time_s1_MJ.rda")
 ```
 
 
@@ -367,25 +294,26 @@ save(time_s1_MJ, file = "output/output_GAM/strat1/Male_Juvenile/time_s1_MJ.rda")
 
 ## Strata 2 Abundance
 ```{r Setup Strata 2}
-s2.response <- "(CPUE + 1)"
+s2.response <- "log(CPUE + 1)"
 
-s2.smooth.terms <- c("s(startlon, startlat, k = ( k_i[[i]]['k_0','Lat_Lon'] + 35))",
-                     "s(I(startdepth^0.25), k = k_i[[i]]['k_0', 'Root_Dep'])",
-                      "s(tempbotm, k = k_i[[i]]['k_0', 'Temp'])",
-                      "s(turbbotm, k = k_i[[i]]['k_0', 'Turb'])",
-                      "s(oxybotm, k = k_i[[i]]['k_0', 'Oxy'])",
-                      "s(salbotm, k = k_i[[i]]['k_0', 'Sal'])",
-                      "s(Dis.to.SHORE, k = k_i[[i]]['k_0', 'Dis'])",
+smooth.terms <- c("s(startdepth, k = k_i[[i]]['k_0', 'Dep'])",
+                     "s(tempbotm, k = k_i[[i]]['k_0', 'Temp'])",
+                     "s(turbbotm, k = k_i[[i]]['k_0', 'Turb'])",
+                     "s(oxybotm, k = k_i[[i]]['k_0', 'Oxy'])",
+                     "s(salbotm, k = k_i[[i]]['k_0', 'Sal'])",
+                     "s(Dis.to.Shore, k = k_i[[i]]['k_0', 'Dis'])",
                      "bottype4")
 
-s2.re.var <- "s(year, bs = 're')"  
+constant_term = "s(startlon, startlat, k = k_i[[i]]['k_0', 'LatLon'] + 45)"
+
+re_term <- "s(year, bs = 're')"
   
 
-s2.smooth_names <- c("Lat_Lon","Root_Dep", "Temp", "Turb", "Oxy", "Sal", "Dis", "Bottm")
-
-s2.re.smooth.name <- "yr"
+smooth_names <- c("LatLon","Dep", "Temp", "Turb", "Oxy", "Sal", "Dis", "Bottype")
 
 s2.family <- Gamma(link = log) 
+
+sp <- c("bn", "bt", "sn")
 
 ```
 
@@ -403,7 +331,6 @@ str(Adult_Female_S2$blacknose)
 
 ```{r Fitting All S2_FA GAMs}
 
-sp <- c("bn", "bt", "bu", "sb", "sn", "sp", "ti")
 
 for(i in 1:length(Adult_Female_S2)){
   
@@ -415,15 +342,15 @@ for(i in 1:length(Adult_Female_S2)){
                                 
                                 response = s2.response,
                             
-                                smooth_terms = s2.smooth.terms,
+                                smooth_terms = smooth.terms,
+                                
+                                constant_term = constant_term,
+                                
+                                re_term = re_term,
                             
-                                smooth_names = s2.smooth_names,
-                            
-                                rand_eff_smooth = s2.re.var,
+                                smooth_names = smooth_names,
                             
                                 family = s2.family,
-                            
-                                in_parallel = FALSE,
                             
                                 est_k = TRUE)) 
            
@@ -432,31 +359,19 @@ for(i in 1:length(Adult_Female_S2)){
 }
 
 
-save( bn_s2_FA, file = "output/output_Gam/strat2/Female_Adult/bn_s2_FA.rda"   )
+save( bn_s2_FA, file = "output/output_GAM/strat2/Female/Adult/bn_s2_FA.rda"   )
 
-save( bt_s2_FA, file = "output/output_Gam/strat2/Female_Adult/bt_s2_FA.rda"   )
+save( bt_s2_FA, file = "output/output_GAM/strat2/Female/Adult/bt_s2_FA.rda"   )
 
-save( bu_s2_FA, file = "output/output_Gam/strat2/Female_Adult/bu_s2_FA.rda"   )
-
-save( sb_s2_FA, file = "output/output_Gam/strat2/Female_Adult/sb_s2_FA.rda"   )
-
-save( sn_s2_FA, file = "output/output_Gam/strat2/Female_Adult/sn_s2_FA.rda"   )
-
-save( sp_s2_FA, file = "output/output_Gam/strat2/Female_Adult/sp_s2_FA.rda"   )
-
-save( ti_s2_FA, file = "output/output_Gam/strat2/Female_Adult/ti_s2_FA.rda"   )
+save( sn_s2_FA, file = "output/output_GAM/strat2/Female/Adult/sn_s2_FA.rda"   )
 
 
 time_s2_FA <- list(time_bn_s2_FA = time_bn_s2_FA,
                    time_bt_s2_FA = time_bt_s2_FA,
-                   time_bu_s2_FA = time_bu_s2_FA,
-                   time_sb_s2_FA = time_sb_s2_FA,
-                   time_sn_s2_FA = time_sn_s2_FA,
-                   time_sp_s2_FA = time_sp_s2_FA,
-                   time_ti_s2_FA = time_ti_s2_FA)
+                   time_sn_s2_FA = time_sn_s2_FA)
 
 
-save(time_s2_FA, file = "output/output_GAM/strat2/Female_Adult/time_s2_FA.rda")
+save(time_s2_FA, file = "output/output_GAM/strat2/Female/Adult/time_s2_FA.rda")
 
 ```
 
@@ -474,8 +389,6 @@ str(Juvenile_Female_S2$blacknose)
 
 ```{r Fitting All S2_FJ GAMs}
 
-sp <- c("bn", "bt", "bu", "sb", "sn", "sp", "ti")
-
 for(i in 1:length(Juvenile_Female_S2)){
   
   assign( paste0( "time_", sp[i], "_s2_FJ" ),
@@ -486,15 +399,15 @@ for(i in 1:length(Juvenile_Female_S2)){
                                 
                                 response = s2.response,
                             
-                                smooth_terms = s2.smooth.terms,
+                                smooth_terms = smooth.terms,
+                                
+                                constant_term = constant_term,
+                                
+                                re_term = re_term,
                             
-                                smooth_names = s2.smooth_names,
-                            
-                                rand_eff_smooth = s2.re.var,
+                                smooth_names = smooth_names,
                             
                                 family = s2.family,
-                            
-                                in_parallel = FALSE,
                             
                                 est_k = TRUE)) 
            
@@ -502,32 +415,20 @@ for(i in 1:length(Juvenile_Female_S2)){
          )
 }
 
-save( bn_s2_FJ, file = "output/output_Gam/strat2/Female_Juvenile/bn_s2_FJ.rda"   )
+save( bn_s2_FJ, file = "output/output_GAM/strat2/Female/Juvenile/bn_s2_FJ.rda"   )
 
-save( bt_s2_FJ, file = "output/output_Gam/strat2/Female_Juvenile/bt_s2_FJ.rda"   )
+save( bt_s2_FJ, file = "output/output_GAM/strat2/Female/Juvenile/bt_s2_FJ.rda"   )
 
-save( bu_s2_FJ, file = "output/output_Gam/strat2/Female_Juvenile/bu_s2_FJ.rda"   )
-
-save( sb_s2_FJ, file = "output/output_Gam/strat2/Female_Juvenile/sb_s2_FJ.rda"   )
-
-save( sn_s2_FJ, file = "output/output_Gam/strat2/Female_Juvenile/sn_s2_FJ.rda"   )
-
-save( sp_s2_FJ, file = "output/output_Gam/strat2/Female_Juvenile/sp_s2_FJ.rda"   )
-
-save( ti_s2_FJ, file = "output/output_Gam/strat2/Female_Juvenile/ti_s2_FJ.rda"   )
+save( sn_s2_FJ, file = "output/output_GAM/strat2/Female/Juvenile/sn_s2_FJ.rda"   )
 
 
 
 time_s2_FJ <- list(time_bn_s2_FJ = time_bn_s2_FJ,
                    time_bt_s2_FJ = time_bt_s2_FJ,
-                   time_bu_s2_FJ = time_bu_s2_FJ,
-                   time_sb_s2_FJ = time_sb_s2_FJ,
-                   time_sn_s2_FJ = time_sn_s2_FJ,
-                   time_sp_s2_FJ = time_sp_s2_FJ,
-                   time_ti_s2_FJ = time_ti_s2_FJ)
+                   time_sn_s2_FJ = time_sn_s2_FJ)
 
 
-save(time_s2_FJ, file = "output/output_GAM/strat2/Female_Juvenile/time_s2_FJ.rda")
+save(time_s2_FJ, file = "output/output_GAM/strat2/Female/Juvenile/time_s2_FJ.rda")
 ```
 
 
@@ -542,8 +443,6 @@ str(Adult_Male_S2$blacknose)
 
 ```{r Fitting All S2_MA GAMs}
 
-sp <- c("bn", "bt", "bu", "sb", "sn", "sp", "ti")
-
 for(i in 1:length(Adult_Male_S2)){
   
   assign( paste0( "time_", sp[i], "_s2_MA" ),
@@ -554,15 +453,15 @@ for(i in 1:length(Adult_Male_S2)){
                                 
                                 response = s2.response,
                             
-                                smooth_terms = s2.smooth.terms,
+                                smooth_terms = smooth.terms,
+                                
+                                constant_term = constant_term,
+                                
+                                re_term = re_term,
                             
-                                smooth_names = s2.smooth_names,
-                            
-                                rand_eff_smooth = s2.re.var,
+                                smooth_names = smooth_names,
                             
                                 family = s2.family,
-                            
-                                in_parallel = FALSE,
                             
                                 est_k = TRUE)) 
            
@@ -570,31 +469,19 @@ for(i in 1:length(Adult_Male_S2)){
          )
 }
 
-save( bn_s2_MA, file = "output/output_Gam/strat2/Male_Adult/bn_s2_MA.rda"   )
+save( bn_s2_MA, file = "output/output_GAM/strat2/Male/Adult/bn_s2_MA.rda"   )
 
-save( bt_s2_MA, file = "output/output_Gam/strat2/Male_Adult/bt_s2_MA.rda"   )
+save( bt_s2_MA, file = "output/output_GAM/strat2/Male/Adult/bt_s2_MA.rda"   )
 
-save( bu_s2_MA, file = "output/output_Gam/strat2/Male_Adult/bu_s2_MA.rda"   )
-
-save( sb_s2_MA, file = "output/output_Gam/strat2/Male_Adult/sb_s2_MA.rda"   )
-
-save( sn_s2_MA, file = "output/output_Gam/strat2/Male_Adult/sn_s2_MA.rda"   )
-
-save( sp_s2_MA, file = "output/output_Gam/strat2/Male_Adult/sp_s2_MA.rda"   )
-
-save( ti_s2_MA, file = "output/output_Gam/strat2/Male_Adult/ti_s2_MA.rda"   )
+save( sn_s2_MA, file = "output/output_GAM/strat2/Male/Adult/sn_s2_MA.rda"   )
 
 
 time_s2_MA <- list(time_bn_s2_MA = time_bn_s2_MA,
                    time_bt_s2_MA = time_bt_s2_MA,
-                   time_bu_s2_MA = time_bu_s2_MA,
-                   time_sb_s2_MA = time_sb_s2_MA,
-                   time_sn_s2_MA = time_sn_s2_MA,
-                   time_sp_s2_MA = time_sp_s2_MA,
-                   time_ti_s2_MA = time_ti_s2_MA)
+                   time_sn_s2_MA = time_sn_s2_MA)
 
 
-save(time_s2_MA, file = "output/output_GAM/strat2/Male_Adult/time_s2_MA.rda")
+save(time_s2_MA, file = "output/output_GAM/strat2/Male/Adult/time_s2_MA.rda")
 ```
 
 
@@ -610,8 +497,6 @@ str(Juvenile_Male_S2$blacknose)
 
 ```{r Fitting All S2_MJ GAMs}
 
-sp <- c("bn", "bt", "bu", "sb", "sn", "sp", "ti")
-
 for(i in 1:length(Juvenile_Male_S2)){
   
   assign( paste0( "time_", sp[i], "_s2_MJ" ),
@@ -622,15 +507,15 @@ for(i in 1:length(Juvenile_Male_S2)){
                                 
                                 response = s2.response,
                             
-                                smooth_terms = s2.smooth.terms,
+                                smooth_terms = smooth.terms,
+                                
+                                constant_term = constant_term,
+                                
+                                re_term = re_term,
                             
-                                smooth_names = s2.smooth_names,
-                            
-                                rand_eff_smooth = s2.re.var,
+                                smooth_names = smooth_names,
                             
                                 family = s2.family,
-                            
-                                in_parallel = FALSE,
                             
                                 est_k = TRUE)) 
            
@@ -638,32 +523,19 @@ for(i in 1:length(Juvenile_Male_S2)){
          )
 }
 
-save( bn_s2_MJ, file = "output/output_Gam/strat2/Male_Juvenile/bn_s2_MJ.rda"   )
+save( bn_s2_MJ, file = "output/output_GAM/strat2/Male/Juvenile/bn_s2_MJ.rda"   )
 
-save( bt_s2_MJ, file = "output/output_Gam/strat2/Male_Juvenile/bt_s2_MJ.rda"   )
+save( bt_s2_MJ, file = "output/output_GAM/strat2/Male/Juvenile/bt_s2_MJ.rda"   )
 
-save( bu_s2_MJ, file = "output/output_Gam/strat2/Male_Juvenile/bu_s2_MJ.rda"   )
-
-save( sb_s2_MJ, file = "output/output_Gam/strat2/Male_Juvenile/sb_s2_MJ.rda"   )
-
-save( sn_s2_MJ, file = "output/output_Gam/strat2/Male_Juvenile/sn_s2_MJ.rda"   )
-
-save( sp_s2_MJ, file = "output/output_Gam/strat2/Male_Juvenile/sp_s2_MJ.rda"   )
-
-save( ti_s2_MJ, file = "output/output_Gam/strat2/Male_Juvenile/ti_s2_MJ.rda"   )
-
+save( sn_s2_MJ, file = "output/output_GAM/strat2/Male/Juvenile/sn_s2_MJ.rda"   )
 
 
 time_s2_MJ <- list(time_bn_s2_MJ = time_bn_s2_MJ,
                    time_bt_s2_MJ = time_bt_s2_MJ,
-                   time_bu_s2_MJ = time_bu_s2_MJ,
-                   time_sb_s2_MJ = time_sb_s2_MJ,
-                   time_sn_s2_MJ = time_sn_s2_MJ,
-                   time_sp_s2_MJ = time_sp_s2_MJ,
-                   time_ti_s2_MJ = time_ti_s2_MJ)
+                   time_sn_s2_MJ = time_sn_s2_MJ)
 
 
-save(time_s2_MJ, file = "output/output_GAM/strat2/Male_Juvenile/time_s2_MJ.rda")
+save(time_s2_MJ, file = "output/output_GAM/strat2/Male/Juvenile/time_s2_MJ.rda")
 ```
 
 
