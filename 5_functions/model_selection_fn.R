@@ -1,41 +1,24 @@
 ### Modified model_selection_fn.R
-gam_select_fn <- function(data = data,
-                          response = response,
-                          smooth_terms = smooth_terms,
-                          smooth_names = smooth_names,
-                          rand_eff_smooth = rand_eff_smooth,
-                          gamma = NULL,
+gam_select_fn <- function(data,
+                          response,
+                          smooth_terms,
+                          constant_term,
+                          re_term,
+                          smooth_names,
+                          gamma = 1,
                           family = Gamma(link = log),
                           in_parallel = FALSE,
                           est_k = FALSE){
+  ### Load Required Packages
   require(mgcv)
   require(magrittr)
   require(plyr)
   require(dplyr)
   
-  if(in_parallel == TRUE){
-    
-    require(parallel)
-    require(snow)
-    require(pipeR)
-    require(doParallel)
-    
-  }
-  
-  ### Options for gamma
-  
-  if(is.null(gamma) == TRUE){
-    gamma = 1
-  } else{
-    gamma = gamma
-  }
-  
-  
   
   ### create matrix of all variable combinations
   N   <- length(smooth_terms)
   vec <- c(TRUE, FALSE)
-  
   
   lst <- lapply(numeric(N), function(x) vec)
   
@@ -46,24 +29,40 @@ gam_select_fn <- function(data = data,
   
   ### Create all model Combinations
   
-  gamMat <- gamMat[-(dim(gamMat)[1]),]
-  names(gamMat) <- c(smooth_names)
+  if(is.null(constant_term) == TRUE){
+    
+    gamMat <- gamMat[-(dim(gamMat)[1]),]
+    names(gamMat) <- c(smooth_names)
+    
+    all_Models_List <- apply( gamMat, 1, function(x) as.formula(
+      paste( c( response, paste( c(smooth_terms[x], re_term), collapse = " + ") ), collapse = " ~ ") 
+    ) )
+    
+    
+  } else{
+    
+    var0 <- TRUE
+    gamMat <- cbind(var0, gamMat)
+    
+    names(gamMat) <- c(smooth_names)
+    
+    terms <- c(constant_term, smooth_terms, re_term)
+    
+    all_Models_List <- apply( gamMat, 1, function(x) as.formula(
+      paste( c( response, paste( terms[x], collapse = " + ") ), collapse = " ~ ") 
+    ) )
+  }
   
-  all_Models_List <- apply( gamMat, 1, function(x) as.formula(
-    paste( c( response, 
-              paste( c( smooth_terms[x], 
-                        rand_eff_smooth),
-                     collapse = " + ") ), 
-           collapse = " ~ ") ) )
+  rm( response, constant_term, smooth_terms, re_term)
   
-  rm( rand_eff_smooth, response, smooth_terms)
+  mod_names <- apply(gamMat, 1, function(x)
+    paste(smooth_names[x],collapse = "_") )
   
+  names(all_Models_List) <- unlist(mod_names)
   
-  ### Create a list with names for all vars in each row of regMar ######
-  ### This will be used to name edf k_0 ... #####
+  ### Create K_i
+  
   col_names <- apply(gamMat, 1, function(x) smooth_names[x] )
-  
-  ### Create k_i data.frame for each item in col_names list ####
   
   k_i <- vector("list", length = nrow( gamMat ) )
   
@@ -79,216 +78,80 @@ gam_select_fn <- function(data = data,
     
   };rm(i)
   
-  ### Fit All Model Combinations
+  ### Fit all Models
   
-  if(in_parallel == FALSE){
+  if(est_k == FALSE){
     
-    if(est_k == FALSE){
-      
-      all_Models_Results <- lapply(all_Models_List,
-                                   function(x) gam(x, data = data,
-                                                   family = family,
-                                                   gamma = gamma))
-    } else if(est_k == TRUE){
-      
-      require(pipeR)
-      
-      all_Models_Results <- vector("list", length = length(all_Models_List))
-      
-      for(i in 1:length(all_Models_Results)){
-        
-        old_gcv <- 1000000
-        new_gcv <- numeric(1)
-        
-        while( any( k_i[[i]][ 'add_k', ] == 1)  ){
-          
-          all_Models_Results[[i]] <- gam(all_Models_List[[i]],
-                                         data = data,
-                                         family = family,
-                                         gamma = gamma) %>>%
-            (~tmp)
-          
-          new_gcv <- tmp$gcv.ubre
-          
-          tmp %>>%
-            summary() %>>%
-            (~tmp2)
-          
-          k_i[[i]]['edf_vec', ] <- tmp2$edf[1:ncol(k_i[[i]])]
-          
-          
-          for(j in col_names[[i]] ){
-            
-            k_i[[i]]['k_prime', j] = k_i[[i]]['k_0', j] - 1
-            
-            
-            
-            if( j == 'Lat_Lon') {
-              
-              k_i[[i]]['diff_df', j] <- k_i[[i]]['k_prime', j] - k_i[[i]]['edf_vec', j] -8
-              
-              ifelse( (k_i[[i]]['diff_df', j] <= 10) == TRUE & (new_gcv <= old_gcv) == TRUE,
-                      k_i[[i]]['add_k', j] <- 1,
-                      k_i[[i]]['add_k', j] <- 0)
-              ifelse( ( k_i[[i]]['diff_df', j] <= 10) == TRUE & (new_gcv <= old_gcv) == TRUE,
-                      k_i[[i]]['k_0', j] <- k_i[[i]]['k_0', j] + 5,
-                      k_i[[i]]['add_k', j] <- 0)
-              
-            } else{
-              
-              k_i[[i]]['diff_df', j] <- k_i[[i]]['k_prime', j] - k_i[[i]]['edf_vec', j] 
-              
-              ifelse( (k_i[[i]]['diff_df', j] <= 2) == TRUE & (new_gcv <= old_gcv) == TRUE,
-                      k_i[[i]]['add_k', j] <- 1,
-                      k_i[[i]]['add_k', j] <- 0)
-              ifelse( (k_i[[i]]['diff_df', j] <= 2) == TRUE & (new_gcv <= old_gcv) == TRUE,
-                      k_i[[i]]['k_0', j] <- k_i[[i]]['k_0', j] + 1,
-                      k_i[[i]]['add_k', j] <- 0)
-            }
-            
-            
-            
-            
-            
-          }
-          
-          if(new_gcv < old_gcv){
-            
-            old_gcv <- new_gcv
-            
-          }
-          
-        }
-        
-      }
-      
-    }
-    
-  } else if(in_parallel == TRUE){
-    
-    if(est_k == FALSE){
-      
-      no_cores <- detectCores()
-      
-      cl <- makeCluster(no_cores)
-      
-      environment(all_Models_List) <- .GlobalEnv
-      
-      clusterExport(cl, list(data = "data", smooth_terms = "smooth_terms", smooth_names = "smooth_names", 
-                             response = "response", gamma = "gamma", family = "family", 
-                             regMat = "regMat", all_Models_List = "all_Models_List"),
-                    envir = environment())
-      
-      clusterEvalQ(cl, c(require(mgcv), require(dplyr), require(magrittr), require(plyr),
-                         require(parallel), require(snow)))
-      
-      all_Models_Results <- parLapply(cl,
-                                      all_Models_List,
-                                      function(x) gam(x, data = data,
-                                                      family = family,
-                                                      gamma = gamma))
-      
-      stopCluster(cl)
-      
-    } else if(est_k == TRUE){
-      
-      stop("est_k doesn't work in Parallel yet!!")
-      
-      environment(all_Models_List) <- .GlobalEnv
-      environment(k_i) <- .GlobalEnv
-      environment(col_names) <- .GlobalEnv
-      
-      number_of_cores <- parallel::detectCores() 
-      clusters <- parallel::makeCluster(number_of_cores)
-      doParallel::registerDoParallel(clusters)
-      
-      all_Models_Results <- vector("list", length = length(all_Models_List))
-      
-      foreach(i = 1:length(all_Models_List),
-              .combine = list,
-              .export=ls(envir=globalenv()),
-              .multicombine=TRUE,
-              .packages = c("pipeR", "mgcv")) %dopar% {
-                
-                old_gcv <- 1000000
-                new_gcv <- numeric(1)
-              } %*%{
-                
-                while( any( k_i[[i]][ 'add_k', ] == 1)  ){
-                  
-                  all_Models_Results[[i]] <- gam(all_Models_List[[i]],
-                                                 data = data,
+    all_Models_Results <- lapply(all_Models_List,
+                                 function(x) gam(x, data = data,
                                                  family = family,
-                                                 gamma = gamma) %>>%
-                    (~tmp)
-                  
-                  new_gcv <- tmp$gcv.ubre
-                  
-                  tmp %>>%
-                    summary() %>>%
-                    (~tmp2)
-                  
-                  k_i[[i]]['edf_vec', ] <- tmp2$edf[1:ncol(k_i[[i]])]
-                  
-                  
-                  for(j in col_names[[i]] ){
-                    
-                    k_i[[i]]['k_prime', j] = k_i[[i]]['k_0', j] - 1
-                    
-                    for(k in 1:length(j)){
-                      
-                      if( j[k] == 'Lat_Lon') {
-                        
-                        k_i[[i]]['diff_df', j[k]] <- k_i[[i]]['k_prime', j[k]] - k_i[[i]]['edf_vec', j[k]] -8
-                        
-                        ifelse( (k_i[[i]]['diff_df', j[k]] <= 10) == TRUE & (new_gcv <= old_gcv) == TRUE,
-                                k_i[[i]]['add_k', j[k]] <- 1,
-                                k_i[[i]]['add_k', j[k]] <- 0)
-                        ifelse( ( k_i[[i]]['diff_df', j[k]] <= 10) == TRUE & (new_gcv <= old_gcv) == TRUE,
-                                k_i[[i]]['k_0', j[k]] <- k_i[[i]]['k_0', j[k]] + 5,
-                                k_i[[i]]['add_k', j[k]] <- 0)
-                        
-                      } else{
-                        
-                        k_i[[i]]['diff_df', j[k]] <- k_i[[i]]['k_prime', j[k]] - k_i[[i]]['edf_vec', j[k]] 
-                        
-                        ifelse( (k_i[[i]]['diff_df', j[k]] <= 2) == TRUE & (new_gcv <= old_gcv) == TRUE,
-                                k_i[[i]]['add_k', j[k]] <- 1,
-                                k_i[[i]]['add_k', j[k]] <- 0)
-                        ifelse( (k_i[[i]]['diff_df', j[k]] <= 2) == TRUE & (new_gcv <= old_gcv) == TRUE,
-                                k_i[[i]]['k_0', j[k]] <- k_i[[i]]['k_0', j[k]] + 1,
-                                k_i[[i]]['add_k', j[k]] <- 0)
-                      }
-                      
-                    }
-                    
-                    
-                    
-                  }
-                  
-                  if(new_gcv < old_gcv){
-                    
-                    old_gcv <- new_gcv
-                    
-                  }
-                  
-                } 
-                
-              }
+                                                 gamma = gamma))
+    
+  } else if(est_k == TRUE){
+    
+    require(pipeR)
+    
+    all_Models_Results <- vector("list", length = length(all_Models_List))
+    
+    for(i in 1:length(all_Models_Results)){
       
-      stopCluster(clusters) 
+      old_gcv <- 1000000
+      new_gcv <- numeric(1)
+      
+      while( any( k_i[[i]][ 'add_k', ] == 1) & new_gcv <= old_gcv  ){
+        
+        old_gcv <- new_gcv
+        
+        all_Models_Results[[i]] <- gam(all_Models_List[[i]],
+                                       data = data,
+                                       family = family,
+                                       gamma = gamma) %>>%
+          (~tmp)
+        
+        new_gcv <- tmp$gcv.ubre
+        
+        tmp %>>%
+          summary() %>>%
+          (~tmp2)
+        
+        k_i[[i]]['edf_vec', ] <- tmp2$edf[1:ncol(k_i[[i]])]
+        
+        
+        for(j in col_names[[i]] ){
+          
+          k_i[[i]]['k_prime', j] = k_i[[i]]['k_0', j] - 1
+          
+          if( j == 'LatLon') {
+            
+            k_i[[i]]['diff_df', j] <- k_i[[i]]['k_prime', j] - k_i[[i]]['edf_vec', j] -8
+            
+            ifelse( (k_i[[i]]['diff_df', j] <= 10) == TRUE & (new_gcv <= old_gcv) == TRUE,
+                    k_i[[i]]['add_k', j] <- 1,
+                    k_i[[i]]['add_k', j] <- 0)
+            ifelse( ( k_i[[i]]['diff_df', j] <= 10) == TRUE & (new_gcv <= old_gcv) == TRUE,
+                    k_i[[i]]['k_0', j] <- k_i[[i]]['k_0', j] + 5,
+                    k_i[[i]]['add_k', j] <- 0)
+            
+          } else{
+            
+            k_i[[i]]['diff_df', j] <- k_i[[i]]['k_prime', j] - k_i[[i]]['edf_vec', j] 
+            
+            ifelse( (k_i[[i]]['diff_df', j] <= 2) == TRUE & (new_gcv <= old_gcv) == TRUE,
+                    k_i[[i]]['add_k', j] <- 1,
+                    k_i[[i]]['add_k', j] <- 0)
+            ifelse( (k_i[[i]]['diff_df', j] <= 2) == TRUE & (new_gcv <= old_gcv) == TRUE,
+                    k_i[[i]]['k_0', j] <- k_i[[i]]['k_0', j] + 1,
+                    k_i[[i]]['add_k', j] <- 0)
+          }
+        }
+      }
     }
   }
   
-  ### Clean Names
+  ### Clean names
   
-  Name_List <- apply(gamMat, 1, function(x)
-    paste(smooth_names[x],collapse = ", ") )
+  names(all_Models_Results) <- mod_names
   
-  mod_names <- apply(gamMat, 1, function(x)
-    paste(smooth_names[x],collapse = "_") )
-  
-  names(all_Models_Results) <- unlist(mod_names)
   
   ### Summary Stats
   
@@ -322,7 +185,7 @@ gam_select_fn <- function(data = data,
   
   ### Create results df
   
-  results <- data.frame( model = unlist(Name_List),
+  results <- data.frame( model = unlist(mod_names),
                          NoOfSmooths = NoOfSmooths,
                          AIC = AIC,
                          delta_AIC = delta_AIC,
@@ -336,7 +199,7 @@ gam_select_fn <- function(data = data,
   Output <- list(results = results,
                  model_fits = all_Models_Results)
   
-  
+
   return(Output)
   
 }
