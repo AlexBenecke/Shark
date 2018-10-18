@@ -468,4 +468,43 @@ Number Male Female and Unknown as well as Adult Juvenile and Unknown
 
 
 
+## Plot data points with color for bottom substrate
+
+```{r load shape file, include=FALSE, eval=FALSE}
+require(maptools)
+require(sp)
+library(rgdal)
+library(lubridate)
+
+gulf.shape <- "shape-file\\Shape\\stateshigh.shp"
+gulf.shape <- maptools::readShapePoly(gulf.shape)
+```
+
+```{r}
+my_xlim <- c(-97.5, -81)
+
+my_ylim <- c(24.5,30.5)
+
+tiff(filename = "bottype.tiff", width = 4000,  height = 2000, res = 300)
+plot(startlat~startlon,
+     data = eff3,
+     xlim = my_xlim, ylim = my_ylim,
+     pch = 1,
+     col = c("red", "Blue", "green", "Black")[eff3$bottype4],
+     bty = "n")
+
+legend("bottom",
+       legend = levels(eff3$bottype4),
+       col = c("red", "Blue", "green", "Black"),
+       pch = 1,
+       bty = "n")
+
+    sp::plot(gulf.shape, add= T,
+            xlim = my_xlim, ylim = my_ylim,
+            xlab = "", ylab = "",
+            xaxt = "n", yaxt = "n",
+            col = "gray",
+            bty="n")
+dev.off()    
+```
 

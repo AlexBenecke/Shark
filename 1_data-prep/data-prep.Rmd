@@ -29,7 +29,6 @@ source("5_functions/dropbox_fn.R") # For interacting with dropbox
 proj = "shark" # Specify project where data is stored 
 output_data_prep <- path_get(proj, "output/output_data_prep")
 
-#source("5_functions/taxa-function.R") # DEFUNKT
 ```
 
 ## Data Exploration ##
@@ -41,7 +40,11 @@ output_data_prep <- path_get(proj, "output/output_data_prep")
 
 ```{r Load CPUE data}
 eff <- read_csv_fn( "data/raw-data/CPUE.csv", proj) %>%
-  arrange(year)
+  mutate(stationkey = factor(stationkey)
+         ,
+         year = factor(year, ordered = TRUE)
+         ) %>%
+  arrange(year, stationkey)
 
 str(eff)
 headtail(eff)
@@ -125,9 +128,9 @@ get.dist.parallel <- function(n) {
           .export=c("point.moll","coast.moll")) %dopar% gDistance(point.moll[i],coast.moll)
 }
 
-eff$Dis.to.SHORE <- get.dist.parallel(length(sp.points))
+eff$Dis.to.Shore <- get.dist.parallel(length(sp.points))
 
-eff$Dis.to.SHORE <- eff$Dis.to.SHORE/1000
+eff$Dis.to.Shore <- eff$Dis.to.Shore/1000
 
 head(eff)
 tail(eff)
@@ -142,7 +145,7 @@ stopCluster(cl)
 gulf.shape <- "shape-file/Shape/stateshigh.shp"
 gulf.shape <- maptools::readShapePoly(gulf.shape)
 
-plot(eff$Long, eff$Lat,
+plot(eff$startlon, eff$startlat,
      xlim = c(-97.5, -80.7), ylim = c(25, 30.5),
      xlab ="Longitude", ylab = "Latitude",
      pch = 19)
@@ -166,9 +169,11 @@ str(eff)
 
 
   red.df <- eff %>% ### create reduced data frame
-    select(year, month, startlat, startlon, start_gmt, 
-           startdepth, tempbotm, fluorobotm, turbbotm, 
-           oxybotm, salbotm, bottype4, Dis.to.SHORE, TAXON, CPUE,Adj.CPUE)
+    mutate(month = ordered(month,
+                         levels = c("Jul", "Aug", "Sep", "Oct", "Nov") ) ) %>%
+    select( stationkey, year, month, CPUE, startlat, startlon, 
+            startdepth, tempbotm, turbbotm, oxybotm, salbotm, Dis.to.Shore,
+            bottype4, TAXON, fluorobotm, Adj.CPUE, start_gmt, bottype8 )
   
 str(red.df)
 tail(red.df)
@@ -299,12 +304,24 @@ tail(red.df)
 
 ```
 
+```{r order variables like I want, eval=FALSE}
+
+red.df %<>% select( stationkey, year, month, common, sex, maturity, 
+                  pres, CPUE, startlat, startlon, 
+                  startdepth, tempbotm, turbbotm, oxybotm, salbotm, Dis.to.Shore,
+                  bottype4, fluorobotm, bottype8, Adj.CPUE, start_gmt, species, TAXON, )
+
+
+### check
+str(red.df)
+tail(red.df)
+```
 
 ### Saving changes to CPUE2.csv 
 
 ```{r Create CPUE2.csv, eval=FALSE}
 
-#8-15-18#write_csv_fn( red.df, file = "data/raw-data/CPUE2.csv", row.names = FALSE, proj)
+#8-28-18#write_csv_fn( red.df, file = "data/raw-data/CPUE2.csv", row.names = FALSE, proj)
 
 ```
 
@@ -317,13 +334,19 @@ tail(red.df)
 
 ```{r Load eff2 data, }
 
-eff2 <- read_csv_fn( "data/raw-data/CPUE2.csv", proj)
+eff2 <- read_csv_fn( "data/raw-data/CPUE2.csv", proj, na.strings = c(NA, "")) %>%
+  mutate(stationkey = factor(stationkey),
+         year = factor(year, ordered = TRUE), 
+         month = ordered(month,
+                         levels = c("Jul", "Aug", "Sep", "Oct", "Nov") ),
+         pres = factor(pres)
+         )
 
 str(eff2)
 headtail(eff2)
 
 Species_Vec <- levels(eff2$common)
-
+Species_Vec
 
 sp.lst <- list(blacknose =  subset(eff2, common == Species_Vec[1]),
               
@@ -357,11 +380,6 @@ for(i in 1:length(sp.lst)){
   
   plot(CPUE ~ year,
        data = sp.lst[[i]])
-  mtext(paste0("r = ",
-               round(cor(sp.lst[[i]]$year,
-                         sp.lst[[i]]$CPUE ),
-                     3) ),
-        side=3,line=0)
   
   plot(CPUE ~ startdepth,
        data = sp.lst[[i]])
@@ -390,15 +408,6 @@ for(i in 1:length(sp.lst)){
                      3)),
         side=3,line=0)
   
-  plot(CPUE ~ fluorobotm,
-       data = sp.lst[[i]])
-  mtext(paste0("r = ",
-               round(cor(sp.lst[[i]]$fluorobotm, 
-                         sp.lst[[i]]$CPUE, 
-                         use = "complete.obs"),
-                     3)),
-        side=3,line=0)
-  
   plot(CPUE ~ turbbotm,
        data = sp.lst[[i]])
   mtext(paste0("r = ",
@@ -417,19 +426,19 @@ for(i in 1:length(sp.lst)){
                      3) ),
         side=3,line=0)
   
-  plot(CPUE ~ bottype4,
-       data = sp.lst[[i]],
-       xlab="", las=2)
-  
-  plot(CPUE ~ Dis.to.SHORE,
+  plot(CPUE ~ Dis.to.Shore,
        data = sp.lst[[i]],
        las=2)
     mtext(paste0("r = ",
-               round(cor(sp.lst[[i]]$Dis.to.SHORE,
+               round(cor(sp.lst[[i]]$Dis.to.Shore,
                          sp.lst[[i]]$CPUE,
                          use = "complete.obs"),
                      3)),
         side=3,line=0)
+  
+  plot(CPUE ~ bottype4,
+       data = sp.lst[[i]],
+       xlab="", las=2)
 
   plot(CPUE ~ startlat,
        data = sp.lst[[i]])
@@ -446,6 +455,17 @@ for(i in 1:length(sp.lst)){
                          sp.lst[[i]]$CPUE ),
                      3)),
         side=3,line=0)
+  
+  plot(CPUE ~ fluorobotm,
+       data = sp.lst[[i]])
+  mtext(paste0("r = ",
+               round(cor(sp.lst[[i]]$fluorobotm, 
+                         sp.lst[[i]]$CPUE, 
+                         use = "complete.obs"),
+                     3)),
+        side=3,line=0)
+  
+  
   
   ### Add Species common name to Title
   mtext(names(sp.lst[i]), 
@@ -683,21 +703,21 @@ for(i in 1:length(sp.lst)){
 #### Distance to shore
 
 ```{r, echo=FALSE}
-### Dis.to.SHORE
+### Dis.to.Shore
 
 for(i in 1:length(sp.lst)){
     oldpar <- par(mfrow=c(2,2), mar=c(5,4,2,1), oma=c(1,0,3,1))
     
-  plot(CPUE ~ Dis.to.SHORE, 
+  plot(CPUE ~ Dis.to.Shore, 
        data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "A",],
        main = "Female Adult" )
-  plot(CPUE ~ Dis.to.SHORE, 
+  plot(CPUE ~ Dis.to.Shore, 
        data =sp.lst[[i]][sp.lst[[i]]$sex=="F" & sp.lst[[i]]$maturity == "J",],
        main = "Female Juvenile" )
-  plot(CPUE ~ Dis.to.SHORE, 
+  plot(CPUE ~ Dis.to.Shore, 
        data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "A",],
        main = "Male Adult" )
-  plot(CPUE ~ Dis.to.SHORE, 
+  plot(CPUE ~ Dis.to.Shore, 
        data =sp.lst[[i]][sp.lst[[i]]$sex=="M" & sp.lst[[i]]$maturity == "J",],
        main = "Male Juvenile")
  
@@ -739,9 +759,10 @@ Juveniles may occupy larger temperature range than adults
 ### 3. Identify outliers
 
 ```{r Explanatory variable range}
-var_vec <- names(sp.lst[[1]][,c(1,3,4,6:13,15)])
+#var_vec <- names(sp.lst[[1]][,c(1,3,4,6:13,15)])
 
-eff2 %>% select(var_vec) %>% summary()
+eff2 %>% select(tempbotm, startdepth, fluorobotm, turbbotm,
+                oxybotm, salbotm, Dis.to.Shore ) %>% summary()
 
 
 range(eff2$tempbotm, na.rm=TRUE) # 8.6 to 31.8 C
@@ -756,7 +777,7 @@ range(eff2$oxybotm, na.rm=TRUE) # 0 to 10.7
 
 range(eff2$salbotm, na.rm=TRUE) # 17.9 to 48.8
 
-range(eff2$Dis.to.SHORE, na.rm=TRUE) # 2.15 to 236.5 km
+range(eff2$Dis.to.Shore, na.rm=TRUE) # 2.15 to 236.5 km
 ```
 
 #### Lat Lon QA/QC
@@ -786,14 +807,15 @@ length(depth.NA)
 
 table(eff2$year[c(depth.NA)])
 
-hist(eff2$year[c(depth.NA)],
+hist(as.numeric(eff2$year[c(depth.NA)]),
      xaxt = "n",
      labels = TRUE,
      ylab = "number of NAs", 
      xlab = "Year",
      main = paste0( "startdepth NAs represent ", eval(round( length(depth.NA)/nrow(eff2) * 100 , 2)), " % of the Data"))
 
-axis(1, at = seq(2001, 2017,1))
+axis(1, at = 1:17,
+     labels = seq(2001, 2017,1))
 ```
 
   I don't think there are any outliers here. Very little positive catch past about 160 m, however, there is no way I should remove those zeros. There are no NAs in startdepth.
@@ -842,14 +864,15 @@ length(temp.NA)
 
 table(eff2$year[c(temp.NA)])
 
-hist(eff2$year[c(temp.NA)],
+hist( as.numeric( eff2$year[c(temp.NA)] ),
      xaxt = "n",
      labels = TRUE,
      ylab = "number of NAs", 
      xlab = "Year",
      main = paste0( "tempbotm NAs represent ", eval(round( length(temp.NA)/nrow(eff2) * 100 , 2)), " % of the Data"))
 
-axis(1, at = seq(2001, 2017,1))
+axis(1, at = 1:17,
+     labels = seq(2001, 2017,1))
 ```
 
 
@@ -905,15 +928,15 @@ length(fluo.NA)
 
 table(eff2$year[c(fluo.NA)])
 
-hist(eff2$year[c(fluo.NA)],
+hist( as.numeric(eff2$year[c(fluo.NA)]),
      xaxt = "n",
      labels = TRUE,
      ylab = "number of NAs", 
      xlab = "Year",
      main = paste0( "fluorobotm NAs represent ", eval(round( length(fluo.NA)/nrow(eff2) * 100 , 2)), " % of the Data"))
 
-axis(1, at = seq(2001, 2017,1))
-
+axis(1, at = 1:17,
+     labels = seq(2001, 2017,1))
 ## n divided by 49 because of 49 levels of data. 
 ```
 
@@ -979,14 +1002,15 @@ length(turb.NA)
 
 table(eff2$year[c(turb.NA)])
 
-hist(eff2$year[c(turb.NA)],
+hist( as.numeric(eff2$year[c(turb.NA)]),
      xaxt = "n",
      labels = TRUE,
      ylab = "number of NAs", 
      xlab = "Year",
      main = paste0( "turbbotm NAs represent ", eval(round( length(turb.NA)/nrow(eff2) * 100 , 2)), " % of the Data"))
 
-axis(1, at = seq(2001, 2017,1))
+axis(1, at = 1:17,
+     labels = seq(2001, 2017,1))
 
 ```
 
@@ -1046,14 +1070,15 @@ length(oxy.NA)
 
 table(eff2$year[c(oxy.NA)])
 
-hist(eff2$year[c(oxy.NA)],
+hist( as.numeric(eff2$year[c(oxy.NA)]),
      xaxt = "n",
      labels = TRUE,
      ylab = "number of NAs", 
      xlab = "Year",
      main = paste0( "oxybotm NAs represent ", eval(round( length(oxy.NA)/nrow(eff2) * 100 , 2)), " % of the Data"))
 
-axis(1, at = seq(2001, 2017,1))
+axis(1, at = 1:17,
+     labels = seq(2001, 2017,1))
 
 ```
 
@@ -1111,14 +1136,15 @@ length(sal.NA)
 
 table(eff2$year[c(sal.NA)])
 
-hist(eff2$year[c(sal.NA)],
+hist( as.numeric(eff2$year[c(sal.NA)]),
      xaxt = "n",
      labels = TRUE,
      ylab = "number of NAs", 
      xlab = "Year",
      main = paste0( "salbotm NAs represent ", eval(round( length(sal.NA)/nrow(eff2) * 100 , 2)), " % of the Data"))
 
-axis(1, at = seq(2001, 2017,1))
+axis(1, at = 1:17,
+     labels = seq(2001, 2017,1))
 
 ```
 
@@ -1157,14 +1183,23 @@ nrow(eff2)
 
 str(eff2)
 
-#8-15-18#write_csv_fn( eff2, file = "data/raw-data/CPUE3.csv", row.names = FALSE, proj)
+#8-28-18#write_csv_fn( eff2, file = "data/clean-data/CPUE3.csv", row.names = FALSE, proj)
 ```
 
 
 ### 5. Load newly created .csv files and save to sp.df list
 
 ```{r load eff3}
-eff3 <- read_csv_fn( "data/raw-data/CPUE3.csv", proj)
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj) %>%
+  mutate(stationkey = factor(stationkey),
+         year = factor(year, ordered = TRUE), 
+         month = ordered(month,
+                         levels = c("Jul", "Aug", "Sep", "Oct", "Nov") ),
+         pres = factor(pres)
+         )
+
+
+str(eff3)
 ```
 
 ```{r Prep load data fn, eval=FALSE, include=FALSE}
@@ -1216,7 +1251,7 @@ str(strat2$blacknose)
 
 ```
 
-```{r Load data function}
+```{r Load data function, eval=FALSE}
 load_data <- function(data = data, strata = 1){
   
   require(FSA)
@@ -1307,6 +1342,8 @@ load_data <- function(data = data, strata = 1){
 
 ```{r test load data function}
 
+source("5_functions/load_data.R")
+
 test_strata1 <- load_data(data = eff3, strata = 1)
 
 str(test_strata1$Female$blacknose)
@@ -1354,11 +1391,6 @@ for(i in 1:length(fem)){
   
   plot(CPUE ~ year,
        data = fem[[i]])
-  mtext(paste0("r = ",
-               round(cor(fem[[i]]$year,
-                         fem[[i]]$CPUE ),
-                     3) ),
-        side=3,line=0)
   
   plot(CPUE ~ startdepth,
        data = fem[[i]])
@@ -1418,11 +1450,11 @@ for(i in 1:length(fem)){
        data = fem[[i]],
        xlab="", las=2)
   
-  plot(CPUE ~ Dis.to.SHORE,
+  plot(CPUE ~ Dis.to.Shore,
        data = fem[[i]],
        las=2)
     mtext(paste0("r = ",
-               round(cor(fem[[i]]$Dis.to.SHORE,
+               round(cor(fem[[i]]$Dis.to.Shore,
                          fem[[i]]$CPUE,
                          use = "complete.obs"),
                      3)),
@@ -1456,4 +1488,19 @@ for(i in 1:length(fem)){
 }
 ```
 
+Remove all NA's and fluorobotm
+```{r}
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" 
+library(FSA)
+library(magrittr)
+
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj , na.strings = c(NA, "")) %>%
+  select(-"fluorobotm") %>%
+  na.omit()
+  
+str(eff3)
+
+#9-18-18#write_csv_fn( eff3, file = "data/clean-data/CPUE3.csv", row.names = FALSE, proj)
+```
 
