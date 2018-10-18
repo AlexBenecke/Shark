@@ -1,0 +1,483 @@
+---
+title: "Blacktip Top GAM (First Look)"
+author: "Alex Benecke"
+date: "October 5, 2018"
+output:     
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 5
+    fig_width: 10
+    fig_height: 10
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+### Load Packages
+library(FSA)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(scales)
+library(mgcv)
+library(sciplot)
+library(pipeR)
+
+```
+
+```{r, echo = FALSE}
+
+Sp_Selct <- 2 #### <<<<<<<<<<<<  IMPORTANT MAKE SURE THIS  IS CORRECT
+
+name_lst <- list(bn = c("bn_s1_FA", "bn_s1_FJ", "bn_s1_MA", "bn_s1_MJ", ### Sp_Selct = 1
+                        "bn_s2_FA", "bn_s2_FJ", "bn_s2_MA", "bn_s2_MJ")
+                 ,
+                 bt = c("bt_s1_FA", "bt_s1_FJ", "bt_s1_MA", "bt_s1_MJ", ### Sp_Selct = 2
+                        "bt_s2_FA", "bt_s2_FJ", "bt_s2_MA", "bt_s2_MJ")
+                 ,
+                 sn = c("sn_s1_FA", "sn_s1_FJ", "sn_s1_MA", "sn_s1_MJ", ### Sp_Selct = 3
+                        "sn_s2_FA", "sn_s2_FJ", "sn_s2_MA", "sn_s2_MJ"))
+
+filenames <- list.files(c("output/output_GAM/strat1/Female/Adult/",
+                          "output/output_GAM/strat1/Female/Juvenile/",
+                          "output/output_GAM/strat1/Male/Adult/",
+                          "output/output_GAM/strat1/Male/Juvenile/",
+                          "output/output_GAM/strat2/Female/Adult/",
+                          "output/output_GAM/strat2/Female/Juvenile/",
+                          "output/output_GAM/strat2/Male/Adult/",
+                          "output/output_GAM/strat2/Male/Juvenile/")
+                        ,
+                        pattern="bt_*" #### <<<<<<<<<<<<  IMPORTANT MAKE SURE THIS  IS CORRECT
+                        , full.names=TRUE, recursive = TRUE)
+
+```
+
+# Strata 1 
+
+## Female 
+
+### **Adult**
+
+```{r, echo = FALSE}
+
+selct_mod = 1 #### <<<<<<<<<<<<  IMPORTANT MAKE SURE THIS  IS CORRECT
+
+load(file = filenames[selct_mod]) 
+
+mod_lst <- get(name_lst[[Sp_Selct]][selct_mod])
+
+mod_results <- mod_lst$results %>% data.frame()
+
+
+best_models <- which(mod_results$delta_AIC < 4)
+
+top_mods <- mod_results[ c(best_models), c(1:4,7)] 
+
+
+```
+```{r, echo=FALSE}
+filenames[selct_mod]
+
+name_lst[[Sp_Selct]][selct_mod]
+```
+
+`r top_mods `
+
+#### *Best Model*
+
+```{r, echo=FALSE}
+  par(mfrow=c(2,2))
+  as.character(mod_lst$results$model[best_models[1]]) %>%
+    print() %>%
+    mod_lst$model_fits[[.]] %>>%
+    (~tmp) %>%
+    gam.check()
+  
+  plot(tmp,
+       pages = 1,
+       scale = 0,
+       all.terms = TRUE)
+  
+summary(tmp)  
+  
+```
+```{r, echo=FALSE}
+rm(selct_mod, mod_lst, mod_results, best_models, top_mods, tmp)
+```
+
+
+
+### **Juvenile**
+
+```{r, echo = FALSE}
+
+selct_mod = 2 #### <<<<<<<<<<<<  IMPORTANT MAKE SURE THIS  IS CORRECT
+
+load(file = filenames[selct_mod]) 
+
+mod_lst <- get(name_lst[[Sp_Selct]][selct_mod])
+
+mod_results <- mod_lst$results %>% data.frame()
+
+
+best_models <- which(mod_results$delta_AIC < 4)
+
+top_mods <- mod_results[ c(best_models), c(1:4,7)] 
+
+
+```
+```{r, echo=FALSE}
+filenames[selct_mod]
+
+name_lst[[Sp_Selct]][selct_mod]
+```
+
+`r top_mods `
+
+#### *Best Model*
+
+```{r, echo=FALSE}
+  par(mfrow=c(2,2))
+  as.character(mod_lst$results$model[best_models[1]]) %>%
+    print() %>%
+    mod_lst$model_fits[[.]] %>>%
+    (~tmp) %>%
+    gam.check()
+  
+  plot(tmp,
+       pages = 1,
+       scale = 0,
+       all.terms = TRUE)
+  
+summary(tmp)
+```
+```{r, echo=FALSE}
+rm(selct_mod, mod_lst, mod_results, best_models, top_mods, tmp)
+```
+
+
+
+## Male 
+
+
+### **Adult** 
+
+
+```{r, echo = FALSE}
+
+selct_mod = 3 #### <<<<<<<<<<<<  IMPORTANT MAKE SURE THIS  IS CORRECT
+
+load(file = filenames[selct_mod]) 
+
+mod_lst <- get(name_lst[[Sp_Selct]][selct_mod])
+
+mod_results <- mod_lst$results %>% data.frame()
+
+
+best_models <- which(mod_results$delta_AIC < 4)
+
+top_mods <- mod_results[ c(best_models), c(1:4,7)] 
+
+
+```
+```{r, echo=FALSE}
+filenames[selct_mod]
+
+name_lst[[Sp_Selct]][selct_mod]
+```
+
+`r top_mods `
+
+#### *Best Model*
+
+```{r, echo=FALSE}
+  par(mfrow=c(2,2))
+  as.character(mod_lst$results$model[best_models[1]]) %>%
+    print() %>%
+    mod_lst$model_fits[[.]] %>>%
+    (~tmp) %>%
+    gam.check()
+  
+  plot(tmp,
+       pages = 1,
+       scale = 0,
+       all.terms = TRUE)
+  
+summary(tmp)
+```
+```{r, echo=FALSE}
+rm(selct_mod, mod_lst, mod_results, best_models, top_mods, tmp)
+```
+
+
+
+
+### **Juvenile**
+
+
+```{r, echo = FALSE}
+
+selct_mod = 4 #### <<<<<<<<<<<<  IMPORTANT MAKE SURE THIS  IS CORRECT
+
+load(file = filenames[selct_mod]) 
+
+mod_lst <- get(name_lst[[Sp_Selct]][selct_mod])
+
+mod_results <- mod_lst$results %>% data.frame()
+
+
+best_models <- which(mod_results$delta_AIC < 4)
+
+top_mods <- mod_results[ c(best_models), c(1:4,7)] 
+
+
+```
+```{r, echo=FALSE}
+filenames[selct_mod]
+
+name_lst[[Sp_Selct]][selct_mod]
+```
+
+`r top_mods `
+
+#### *Best Model*
+
+```{r, echo=FALSE}
+  par(mfrow=c(2,2))
+  as.character(mod_lst$results$model[best_models[1]]) %>%
+    print() %>%
+    mod_lst$model_fits[[.]] %>>%
+    (~tmp) %>%
+    gam.check()
+  
+  plot(tmp,
+       pages = 1,
+       scale = 0,
+       all.terms = TRUE)
+  
+summary(tmp)
+```
+```{r, echo=FALSE}
+rm(selct_mod, mod_lst, mod_results, best_models, top_mods, tmp)
+```
+
+
+
+
+# Strata 2 
+
+
+## Female
+
+### **Adult** 
+
+
+
+```{r, echo = FALSE}
+
+selct_mod = 5 #### <<<<<<<<<<<<  IMPORTANT MAKE SURE THIS  IS CORRECT
+
+load(file = filenames[selct_mod]) 
+
+mod_lst <- get(name_lst[[Sp_Selct]][selct_mod])
+
+mod_results <- mod_lst$results %>% data.frame()
+
+
+best_models <- which(mod_results$delta_AIC < 4)
+
+top_mods <- mod_results[ c(best_models), c(1:4,7)] 
+
+
+```
+```{r, echo=FALSE}
+filenames[selct_mod]
+
+name_lst[[Sp_Selct]][selct_mod]
+```
+
+`r top_mods `
+
+#### *Best Model*
+
+```{r, echo=FALSE}
+  par(mfrow=c(2,2))
+  as.character(mod_lst$results$model[best_models[1]]) %>%
+    print() %>%
+    mod_lst$model_fits[[.]] %>>%
+    (~tmp) %>%
+    gam.check()
+  
+  plot(tmp,
+       pages = 1,
+       scale = 0,
+       all.terms = TRUE)
+  
+summary(tmp)
+```
+```{r, echo=FALSE}
+rm(selct_mod, mod_lst, mod_results, best_models, top_mods, tmp)
+```
+
+
+
+### **Juvenile**
+
+
+
+```{r, echo = FALSE}
+
+selct_mod = 6 #### <<<<<<<<<<<<  IMPORTANT MAKE SURE THIS  IS CORRECT
+
+load(file = filenames[selct_mod]) 
+
+mod_lst <- get(name_lst[[Sp_Selct]][selct_mod])
+
+mod_results <- mod_lst$results %>% data.frame()
+
+
+best_models <- which(mod_results$delta_AIC < 4)
+
+top_mods <- mod_results[ c(best_models), c(1:4,7)] 
+
+
+```
+```{r, echo=FALSE}
+filenames[selct_mod]
+
+name_lst[[Sp_Selct]][selct_mod]
+```
+
+`r top_mods `
+
+#### *Best Model*
+
+```{r, echo=FALSE}
+  par(mfrow=c(2,2))
+  as.character(mod_lst$results$model[best_models[1]]) %>%
+    print() %>%
+    mod_lst$model_fits[[.]] %>>%
+    (~tmp) %>%
+    gam.check()
+  
+  plot(tmp,
+       pages = 1,
+       scale = 0,
+       all.terms = TRUE)
+  
+summary(tmp)
+```
+```{r, echo=FALSE}
+rm(selct_mod, mod_lst, mod_results, best_models, top_mods, tmp)
+```
+
+
+
+## Male
+
+### **Adult** 
+
+
+
+```{r, echo = FALSE}
+
+selct_mod = 7 #### <<<<<<<<<<<<  IMPORTANT MAKE SURE THIS  IS CORRECT
+
+load(file = filenames[selct_mod]) 
+
+mod_lst <- get(name_lst[[Sp_Selct]][selct_mod])
+
+mod_results <- mod_lst$results %>% data.frame()
+
+
+best_models <- which(mod_results$delta_AIC < 4)
+
+top_mods <- mod_results[ c(best_models), c(1:4,7)] 
+
+
+```
+```{r, echo=FALSE}
+filenames[selct_mod]
+
+name_lst[[Sp_Selct]][selct_mod]
+```
+
+`r top_mods `
+
+#### *Best Model*
+
+```{r, echo=FALSE}
+  par(mfrow=c(2,2))
+  as.character(mod_lst$results$model[best_models[1]]) %>%
+    print() %>%
+    mod_lst$model_fits[[.]] %>>%
+    (~tmp) %>%
+    gam.check()
+  
+  plot(tmp,
+       pages = 1,
+       scale = 0,
+       all.terms = TRUE)
+  
+summary(tmp)
+```
+```{r, echo=FALSE}
+rm(selct_mod, mod_lst, mod_results, best_models, top_mods, tmp)
+```
+
+
+
+### **Juvenile**
+
+
+
+```{r, echo = FALSE}
+
+selct_mod = 8 #### <<<<<<<<<<<<  IMPORTANT MAKE SURE THIS  IS CORRECT
+
+load(file = filenames[selct_mod]) 
+
+mod_lst <- get(name_lst[[Sp_Selct]][selct_mod])
+
+mod_results <- mod_lst$results %>% data.frame()
+
+
+best_models <- which(mod_results$delta_AIC < 4)
+
+top_mods <- mod_results[ c(best_models), c(1:4,7)] 
+
+
+```
+```{r, echo=FALSE}
+filenames[selct_mod]
+
+name_lst[[Sp_Selct]][selct_mod]
+```
+
+`r top_mods `
+
+#### *Best Model*
+
+```{r, echo=FALSE}
+  par(mfrow=c(2,2))
+  as.character(mod_lst$results$model[best_models[1]]) %>%
+    print() %>%
+    mod_lst$model_fits[[.]] %>>%
+    (~tmp) %>%
+    gam.check()
+  
+  plot(tmp,
+       pages = 1,
+       scale = 0,
+       all.terms = TRUE)
+  
+summary(tmp)
+```
+```{r, echo=FALSE}
+rm(selct_mod, mod_lst, mod_results, best_models, top_mods, tmp)
+```
+
