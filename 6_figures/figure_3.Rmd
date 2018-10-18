@@ -1,0 +1,753 @@
+---
+title: "Figure 3"
+author: "Alex Benecke"
+date: "September 6, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r Load Packages, eval=TRUE, include=FALSE}
+### Load Packages
+library(FSA)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(scales)
+library(mgcv)
+library(sciplot)
+library(knitr)
+library(kableExtra)
+library(pipeR)
+
+#source("plot_centered_mean.R")
+
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" # Specify project where data is stored 
+
+source("5_functions/model_selection_fn.R")
+
+source("5_functions/load_data.R")
+```
+
+```{r Load Data for Figure 3, include=FALSE, eval=FALSE}
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj)
+
+eff3$count <- 1
+
+str(eff3)
+headtail(eff3)
+
+## Note pres must be numeric for table 1 >> I've been modifying the load_data with fact_vars if FALSE pres is not a factor variable (default is TRUE)
+
+
+strat2_Adult <- load_data(data = eff3[eff3$maturity == "A",] %>% droplevels(), strata = 2, fact_vars = FALSE)
+strat2_Juvenile <- load_data(data = eff3[eff3$maturity == "J",] %>% droplevels(), strata = 2, fact_vars = FALSE)
+
+
+Zero_Adult <- load_data(data = eff3[eff3$maturity == "A" & eff3$pres == 0,] %>% droplevels(), strata = 1, fact_vars = TRUE)
+Zero_Juvenile <- load_data(data = eff3[eff3$maturity == "J" & eff3$pres == 0,] %>% droplevels(), strata = 1, fact_vars = TRUE)
+
+
+s2_orderd <- list(s2_FA = strat2_Adult$Female,
+                  s2_FJ = strat2_Juvenile$Female,
+                  s2_MA = strat2_Adult$Female,
+                  s2_MJ = strat2_Juvenile$Male)
+
+Zero_ordered <- list(Z_FA = Zero_Adult$Female,
+                     Z_FJ = Zero_Juvenile$Female,
+                     Z_MA = Zero_Adult$Male,
+                     Z_MJ = Zero_Juvenile$Male)
+
+rm( eff3, strat2_Adult, strat2_Juvenile, Zero_Adult, Zero_Juvenile)
+```
+
+```{r Load Best Models, eval = FALSE, include = FALSE}
+filenames <- list.files(c("output/output_GAM/best/blacknose/strat1",
+                             "output/output_GAM/best/blacknose/strat2"
+                             ,
+                             "output/output_GAM/best/blacktip/strat1",
+                             "output/output_GAM/best/blacktip/strat2"
+                             ,
+                             "output/output_GAM/best/sharpnose/strat1",
+                             "output/output_GAM/best/sharpnose/strat2"
+                             )
+                           , pattern="*.rda", full.names=TRUE)
+
+lapply(filenames, load, .GlobalEnv)
+
+
+rm( filenames )
+
+### Create list of models
+mod_lst_s1 <- list(bn_mod_s1 = list( # Blacknose
+                                       bn_s1_FA_best = bn_s1_FA_best, ## bn s1
+                                       bn_s1_FJ_best = bn_s1_FJ_best,
+                                       bn_s1_MA_best = bn_s1_MA_best,
+                                       bn_s1_MJ_best = bn_s1_MJ_best
+                                       )
+                ,
+                bt_mod_s1 = list(    # Blacktip
+                                       bt_s1_FA_best = bt_s1_FA_best, ## bt s1
+                                       bt_s1_FJ_best = bt_s1_FJ_best,
+                                       bt_s1_MA_best = bt_s1_MA_best,
+                                       bt_s1_MJ_best = bt_s1_MJ_best
+                                       )
+                ,
+                sn_mod_s1 = list(    # Sharpnose
+                                       sn_s1_FA_best = sn_s1_FA_best, ## sn s1
+                                       sn_s1_FJ_best = sn_s1_FJ_best,
+                                       sn_s1_MA_best = sn_s1_MA_best,
+                                       sn_s1_MJ_best = sn_s1_MJ_best
+                                       )
+                )
+
+### Check list
+length(mod_lst_s1);names(mod_lst_s1)
+length(mod_lst_s1[[1]]);names(mod_lst_s1[[1]])
+length(mod_lst_s1[[2]]);names(mod_lst_s1[[2]])
+length(mod_lst_s1[[3]]);names(mod_lst_s1[[3]])
+mod_lst_s1$bn_mod_s1$bn_s1_FA_best
+
+  ### strata 2 models
+mod_lst_s2 <- list(bn_mod_s2 = list( # Blacknose
+                                       bn_s2_FA_best = bn_s2_FA_best, ## bn s2
+                                       bn_s2_FJ_best = bn_s2_FJ_best,
+                                       bn_s2_MA_best = bn_s2_MA_best,
+                                       bn_s2_MJ_best = bn_s2_MJ_best
+                                       )
+                ,
+                bt_mod_s2 = list(    # Blacktip
+                                       bt_s2_FA_best = bt_s2_FA_best, ## bt s2
+                                       bt_s2_FJ_best = bt_s2_FJ_best,
+                                       bt_s2_MA_best = bt_s2_MA_best,
+                                       bt_s2_MJ_best = bt_s2_MJ_best
+                                       )
+                ,
+                sn_mod_s2 = list(    # Sharpnose
+                                       sn_s2_FA_best = sn_s2_FA_best, ## sn s2
+                                       sn_s2_FJ_best = sn_s2_FJ_best,
+                                       sn_s2_MA_best = sn_s2_MA_best,
+                                       sn_s2_MJ_best = sn_s2_MJ_best
+                                       )
+                )
+
+### Check list
+length(mod_lst_s2);names(mod_lst_s2)
+length(mod_lst_s2[[1]]);names(mod_lst_s2[[1]])
+length(mod_lst_s2[[2]]);names(mod_lst_s2[[2]])
+length(mod_lst_s2[[3]]);names(mod_lst_s2[[3]])
+mod_lst_s2$bn_mod_s2$bn_s2_FA_bes
+
+
+rm(bn_s1_FA_best, bn_s1_FJ_best, bn_s1_MA_best, bn_s1_MJ_best,
+   bn_s2_FA_best, bn_s2_FJ_best, bn_s2_MA_best, bn_s2_MJ_best
+   ,
+   bt_s1_FA_best, bt_s1_FJ_best, bt_s1_MA_best, bt_s1_MJ_best,
+   bt_s2_FA_best, bt_s2_FJ_best, bt_s2_MA_best, bt_s2_MJ_best
+   ,
+   sn_s1_FA_best, sn_s1_FJ_best, sn_s1_MA_best, sn_s1_MJ_best,
+   sn_s2_FA_best, sn_s2_FJ_best, sn_s2_MA_best, sn_s2_MJ_best
+   )
+```
+
+```{r load shape file, include=FALSE, eval=FALSE}
+require(maptools)
+require(sp)
+library(rgdal)
+library(lubridate)
+
+gulf.shape <- "shape-file\\Shape\\stateshigh.shp"
+gulf.shape <- maptools::readShapePoly(gulf.shape)
+```
+
+```{r figure 3 tiff file paths, include = FALSE, eval=FALSE}
+# Strata 1
+
+file_name <- numeric( length(mod_lst_s1) )
+
+letr <- letters[c(1:3)]
+
+for(i in 1:length(file_name) ){
+  
+  file_name[i] <- paste0("6_figures\\figures\\Figure_3_(",letr[i], ").tiff")
+}
+
+file_name
+```
+
+
+```{r fig3 prep, include=FALSE, eval=FALSE }
+plot_tag <- paste0("(", letters[1:3], ")")
+
+my_xlim <- c(-97.5, -81)
+
+my_ylim <- c(24.5,30.5)
+
+x_ticks <- seq(-98, -81)
+#-80.75, -81.25
+y_ticks <- round(seq(24.5, 30.5, length.out = 5),1)
+
+
+cex_pts <- 0.25  #0.425
+col_pts <- rgb(0.25,0.25,0.25,0.25) ### only for Strata 1
+cex_legend <- 1.25
+
+lwd_axis <- 1
+cex_axis <- 1
+cex_mtxt <- 1
+
+Lon_line <- 2
+Lat_line <- 2.5
+
+## mtxt top
+top_ln <- 1.15
+top_cex <- 1.25
+
+  # mtxt left
+l_ln <- 4    
+l_cex <- 1.25
+
+### plot tag
+letter_line <- 1.15 #0
+letter_at <- 0
+letter_cex <- 1.25
+```
+
+I added type = "response" and changed year to 2017 (9/10/2018)
+
+```{r}
+for(i in 1:length(mod_lst_s1)){ ## Loop through species in mod_lst_s1 and mod_lst_s2
+  
+  tiff(filename = file_name[i], width = 2000,  height = 2000, res = 300)
+  
+  layout(matrix(c(1:8), nrow = 4, ncol = 2, byrow = FALSE))
+  
+  par(oma = c(2.75, 6, 2.75, 0), # two rows of text at the outer left and bottom margin
+      mar = c(0.5, 0.5, 0, 0), # space for one row of text at ticks and to separate plots
+      mgp = c(2, 0.75, 0))    # axis label at 2 rows distance, tick labels at 1 row 
+  
+  ### Strata 1
+  for(j in 1:length(mod_lst_s1[[i]])){
+    
+    vis.gam(mod_lst_s1[[i]][[j]],
+            view = c("startlon", "startlat"),
+            xlim = my_xlim, ylim = my_ylim,
+            xlab = "", ylab = "",
+            xaxt = "n", yaxt = "n",
+            plot.type = "contour", 
+            too.far = 0.07, 
+            n.grid = 120, 
+            main = "",
+            bty = "n", 
+            #cond = list(year = "2017"),
+            type = "response")
+    
+    sp::plot(gulf.shape, add= T,
+            xlim = my_xlim, ylim = my_ylim,
+            xlab = "", ylab = "",
+            xaxt = "n", yaxt = "n",
+            col = "gray",
+            bty="n")
+  
+    par(new = T)
+    
+    plot(s2_orderd[[j]][[i]]$startlon,
+         s2_orderd[[j]][[i]]$startlat,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         pch = 20,
+         bty="n",
+         cex = cex_pts)
+    
+    par(new=T)
+    
+    plot(Zero_ordered[[j]][[i]]$startlon,
+         Zero_ordered[[j]][[i]]$startlat,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         pch = 21,
+         bty="n",
+         cex = cex_pts,
+         col = col_pts)
+    
+    ## x-axis
+    if(j == 4){
+      
+    axis(1,
+     at = x_ticks,
+     lwd = lwd_axis,
+     cex.axis = cex_axis)
+  
+    mtext("Longitude",
+      side = 1,
+      line = Lon_line,
+      cex = cex_mtxt)      
+      
+    }
+    
+    ## Y-axis (all plots)
+    axis(2,
+     at = y_ticks,
+     las = 2,
+     lwd = lwd_axis,
+     cex.axis = cex_axis)
+  
+    mtext("Latitude",
+      side = 2,
+      line = Lat_line,
+      cex = cex_mtxt)
+  
+}
+
+
+
+### Strata 2
+for(j in 1:length( mod_lst_s2[[i]] ) ){
+  
+  vis.gam(mod_lst_s2[[i]][[j]],
+          view = c("startlon", "startlat"),
+          xlim = my_xlim, ylim = my_ylim,
+          xlab = "", ylab = "",
+          xaxt = "n", yaxt = "n",
+          plot.type = "contour", 
+          too.far = 0.07, 
+          n.grid = 120, 
+          main = "",
+          bty = "n", 
+          #cond = list(year = "2017"),
+          type = "response")
+  
+  sp::plot(gulf.shape, add= T,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         col = "gray",
+         bty="n")
+  
+    par(new = T)
+    
+    plot(s2_orderd[[j]][[i]]$startlon,
+         s2_orderd[[j]][[i]]$startlat,
+       xlim = my_xlim, ylim = my_ylim,
+       xlab = "", ylab = "",
+       xaxt = "n", yaxt = "n",
+       pch = 20,
+       bty="n",
+       cex = cex_pts)
+    
+    # x-axis
+    if(j == 4){
+      
+    axis(1,
+     at = x_ticks,
+     lwd = lwd_axis,
+     cex.axis = cex_axis)
+  
+    mtext("Longitude",
+      side = 1,
+      line = Lon_line,
+      cex = cex_mtxt)      
+      
+    }
+  
+}
+
+mtext("Presence",
+      side = 3, 
+      at = 1/4,
+      line = top_ln,
+      cex = top_cex,
+      outer = TRUE)
+        
+mtext("Abundance",
+      side = 3, 
+      at = 0.75,
+      line = top_ln,
+      cex = top_cex,
+      outer = TRUE)
+      
+mtext("Female Adult",
+      side = 2,
+      at = 7/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
+
+mtext("Female Juvenile",
+      side = 2,
+      at = 5/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
+
+mtext("Male Adult",
+      side = 2,
+      at = 3/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
+
+mtext("Male Juvenile",
+      side = 2,
+      at = 1/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
+
+mtext(plot_tag[i],
+        side = 3, 
+        at = letter_at,
+        line = letter_line,
+        cex = letter_cex,
+        outer = TRUE)
+
+dev.off()
+  
+  
+}
+
+
+
+```
+
+
+
+
+###### test zone
+
+
+```{r}
+### Sharpnose
+sn_s1 <- mod_lst_s1[[3]]
+sn_s2 <- mod_lst_s2[[3]]
+
+## S1
+## Fa
+j = 1
+## FJ
+j = 2
+## MA
+j = 3
+## MJ
+j = 4
+
+par(mfrow = c(1,1))
+
+
+plot.gam(sn_s1[[j]],
+         select = 1,
+         xlim = my_xlim, ylim = my_ylim,
+         scheme = 2,
+         main = "",
+         bty = "n"
+         )
+
+    sp::plot(gulf.shape, add= T,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         col = "gray",
+         bty="n")
+
+
+    vis.gam(sn_s1[[j]],
+            view = c("startlon", "startlat"),
+            xlim = my_xlim, ylim = my_ylim,
+            plot.type = "contour", 
+            too.far = 0.07, 
+            n.grid = 120, 
+            main = "",
+            bty = "n", 
+            cond = list(year = "2017"),
+            type = "response"
+            )
+
+
+    
+## s2
+    vis.gam(sn_s2[[j]],
+            view = c("startlon", "startlat"),
+            xlim = my_xlim, ylim = my_ylim,
+            xlab = "", ylab = "",
+            xaxt = "n", yaxt = "n",
+            plot.type = "contour", 
+            too.far = 0.07, 
+            n.grid = 120, 
+            main = "",
+            bty = "n", 
+            cond = list(year = "2017"),
+            type = "response",
+            se = 1
+            )
+    
+    
+    
+    
+    
+layout(matrix(c(1:8), nrow = 4, ncol = 2, byrow = TRUE))    
+par(oma = c(2.75, 6, 2.75, 0), # two rows of text at the outer left and bottom margin
+      mar = c(0.5, 0.5, 0, 0), # space for one row of text at ticks and to separate plots
+      mgp = c(2, 0.75, 0))
+  
+for(j in 1:4){
+  
+      vis.gam(sn_s1[[j]],
+            view = c("startlon", "startlat"),
+            xlim = my_xlim, ylim = my_ylim,
+            xlab = "", ylab = "",
+            xaxt = "n", yaxt = "n",
+            plot.type = "contour", 
+            too.far = 0.07, 
+            n.grid = 120, 
+            main = "",
+            bty = "n", 
+            cond = list(year = "2017"),
+            type = "response"
+            )
+  
+    sp::plot(gulf.shape, add= T,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         col = "gray",
+         bty="n")
+
+
+    
+## s2
+    vis.gam(sn_s2[[j]],
+            view = c("startlon", "startlat"),
+            xlim = my_xlim, ylim = my_ylim,
+            xlab = "", ylab = "",
+            xaxt = "n", yaxt = "n",
+            plot.type = "contour", 
+            too.far = 0.07, 
+            n.grid = 120, 
+            main = "",
+            bty = "n", 
+            cond = list(year = "2017"),
+            type = "response"
+            )
+    
+      sp::plot(gulf.shape, add= T,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         col = "gray",
+         bty="n")
+  
+  
+}
+  
+  
+  
+  
+```
+
+
+
+
+
+```{r Figure 3 Strata 1 All plots, include=FALSE, eval=FALSE}
+
+  ## Sharpnose
+  
+  
+par(mfrow = c(4, 2),     # 4x2 layout
+    oma = c(2.75, 6, 2.75, 0), # two rows of text at the outer left and bottom margin
+    mar = c(0.5, 0.5, 0, 0), # space for one row of text at ticks and to separate plots
+    mgp = c(2, 0.75, 0))    # axis label at 2 rows distance, tick labels at 1 row  
+
+layout(matrix(c(1:8), nrow = 4, ncol = 2, byrow = FALSE))
+
+ ### Strata 1
+for(i in 1:length(mod_lst_s1)){
+  
+  vis.gam(mod_lst_s1[[i]],
+          view = c("startlon", "startlat"),
+          xlim = my_xlim, ylim = my_ylim,
+          xlab = "", ylab = "",
+          xaxt = "n", yaxt = "n",
+          plot.type = "contour", 
+          too.far = 0.07, 
+          n.grid = 120, 
+          main = "",
+          bty = "n", 
+          cond = list(YEAR = 2013))
+  
+  sp::plot(gulf.shape, add= T,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         col = "gray",
+         bty="n")
+  
+    par(new = T)
+    
+    plot(s2_orderd[[i]]$sharpnose$startlon,
+         s2_orderd[[i]]$sharpnose$startlat,
+       xlim = my_xlim, ylim = my_ylim,
+       xlab = "", ylab = "",
+       xaxt = "n", yaxt = "n",
+       pch = 20,
+       bty="n",
+       cex = cex_pts)
+    
+    par(new=T)
+    
+    plot(Zero_ordered[[i]]$sharpnose$startlon,
+         Zero_ordered[[i]]$sharpnose$startlat,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         pch = 21,
+         bty="n",
+         cex = cex_pts,
+         col = col_pts)
+    
+    ## x-axis
+    if(i == 4){
+      
+    axis(1,
+     at = x_ticks,
+     lwd = lwd_axis,
+     cex.axis = cex_axis)
+  
+    mtext("Longitude",
+      side = 1,
+      line = Lon_line,
+      cex = cex_mtxt)      
+      
+    }
+    
+    ## Y-axis (all plots)
+    axis(2,
+     at = y_ticks,
+     las = 2,
+     lwd = lwd_axis,
+     cex.axis = cex_axis)
+  
+    mtext("Latitude",
+      side = 2,
+      line = Lat_line,
+      cex = cex_mtxt)
+  
+}
+
+
+### Strata 2
+for(i in 1:length(mod_lst_s2)){
+  
+  vis.gam(mod_lst_s2[[i]],
+          view = c("startlon", "startlat"),
+          xlim = my_xlim, ylim = my_ylim,
+          xlab = "", ylab = "",
+          xaxt = "n", yaxt = "n",
+          plot.type = "contour", 
+          too.far = 0.07, 
+          n.grid = 120, 
+          main = "",
+          bty = "n", 
+          cond = list(YEAR = 2013))
+  
+  sp::plot(gulf.shape, add= T,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         col = "gray",
+         bty="n")
+  
+    par(new = T)
+    
+    plot(s2_orderd[[i]]$sharpnose$startlon,
+         s2_orderd[[i]]$sharpnose$startlat,
+       xlim = my_xlim, ylim = my_ylim,
+       xlab = "", ylab = "",
+       xaxt = "n", yaxt = "n",
+       pch = 20,
+       bty="n",
+       cex = cex_pts)
+    
+    # x-axis
+    if(i == 4){
+      
+    axis(1,
+     at = x_ticks,
+     lwd = lwd_axis,
+     cex.axis = cex_axis)
+  
+    mtext("Longitude",
+      side = 1,
+      line = Lon_line,
+      cex = cex_mtxt)      
+      
+    }
+  
+}
+
+mtext("Presence",
+      side = 3, 
+      at = 1/4,
+      line = top_ln,
+      cex = top_cex,
+      outer = TRUE)
+        
+mtext("Abundance",
+      side = 3, 
+      at = 0.75,
+      line = top_ln,
+      cex = top_cex,
+      outer = TRUE)
+      
+mtext("Female Adult",
+      side = 2,
+      at = 7/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
+
+mtext("Female Juvenile",
+      side = 2,
+      at = 5/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
+
+mtext("Male Adult",
+      side = 2,
+      at = 3/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
+
+mtext("Male Juvenile",
+      side = 2,
+      at = 1/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
+
+dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

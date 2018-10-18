@@ -1,0 +1,711 @@
+---
+title: "Figure 2"
+author: "Alex Benecke"
+date: "September 6, 2018"
+output: html_document
+---
+
+### **Figure 2**  Smooth Fits for each variable by strata and maturity (Maybe Sex)
+
+i. display in table of plots Explanatory variables x and strata maturity (and Sex) on Y
+
+Multiple species either multiple plots or overplotted with each other???
+
+#### **Strat 1**
+
+```{r Load Best Strat 1 Models, eval = FALSE, include = FALSE}
+filenames_s1 <- list.files(c("output/output_GAM/best/blacknose/strat1",
+                             "output/output_GAM/best/blacktip/strat1"
+                             ,"output/output_GAM/best/sharpnose/strat1"
+                             )
+                           , pattern="*.rda", full.names=TRUE)
+
+lapply(filenames_s1, load, .GlobalEnv)
+
+
+rm( filenames_s1 )
+
+### Create list of models
+
+
+
+mod_lst_s1 <- list(bn_mod_s1 = list( # Blacknose
+                                       bn_s1_FA_best = bn_s1_FA_best, ## bn s1
+                                       bn_s1_FJ_best = bn_s1_FJ_best,
+                                       bn_s1_MA_best = bn_s1_MA_best,
+                                       bn_s1_MJ_best = bn_s1_MJ_best
+                                       )
+                ,
+                bt_mod_s1 = list(    # Blacktip
+                                       bt_s1_FA_best = bt_s1_FA_best, ## bt s1
+                                       bt_s1_FJ_best = bt_s1_FJ_best,
+                                       bt_s1_MA_best = bt_s1_MA_best,
+                                       bt_s1_MJ_best = bt_s1_MJ_best
+                                       )
+                ,
+                sn_mod_s1 = list(    # Sharpnose
+                                       sn_s1_FA_best = sn_s1_FA_best, ## sn s1
+                                       sn_s1_FJ_best = sn_s1_FJ_best,
+                                       sn_s1_MA_best = sn_s1_MA_best,
+                                       sn_s1_MJ_best = sn_s1_MJ_best
+                                       )
+                )
+
+### Check list
+length(mod_lst_s1);names(mod_lst_s1)
+length(mod_lst_s1[[1]]);names(mod_lst_s1[[1]])
+length(mod_lst_s1[[2]]);names(mod_lst_s1[[2]])
+length(mod_lst_s1[[3]]);names(mod_lst_s1[[3]])
+mod_lst_s1$bn_mod_s1$bn_s1_FA_best
+
+
+rm(bn_s1_FA_best, bn_s1_FJ_best, bn_s1_MA_best, bn_s1_MJ_best
+   ,
+   bt_s1_FA_best, bt_s1_FJ_best, bt_s1_MA_best, bt_s1_MJ_best
+   ,
+   sn_s1_FA_best, sn_s1_FJ_best, sn_s1_MA_best, sn_s1_MJ_best 
+   )
+```
+
+
+##### **Blacknose**
+
+**Variable Order**
+
+| Depth | Temperature | Turbidity | Dissolved Oxygen | Salinity | Distance to Shore | Year |
+|:-----:|:-----------:|:---------:|:----------------:|:--------:|:-----------------:|:----:|
+|  1    |    2        |    3      |       4          |    5     |         6         |   7  |
+
+```{r strat1 Model structures Blacknose Fig2, include = FALSE, eval=FALSE}
+## Blacknose
+    ## Strat 1
+ ## FA
+plot(mod_lst_s1$bn_mod_s1$bn_s1_FA_best, pages = 1, scale = 0)
+bn_row_1 <- c( 1, 2, 0, 3, 4, 5, 6)
+            #  D, T, T, O, S, D, Y
+  ## FJ
+plot(mod_lst_s1$bn_mod_s1$bn_s1_FJ_best, pages = 1, scale = 0)
+bn_row_2 <- c( 7, 8, 0, 0, 0, 9, 10)
+            #  D, T, T, O, S, D, Y
+  ## MA
+plot(mod_lst_s1$bn_mod_s1$bn_s1_MA_best, pages = 1, scale = 0)
+bn_row_3 <- c( 11, 12, 13, 14, 15, 16, 17)
+            #  D, T, T, O, S, D, Y
+  ## MJ
+plot(mod_lst_s1$bn_mod_s1$bn_s1_MJ_best, pages = 1, scale = 0)
+bn_row_4 <-  c( 18, 19, 0, 20, 0, 21, 22)
+            #  D, T, T, O, S, D, Y
+
+(bn_mat_s1 <- matrix(c(bn_row_1, bn_row_2, bn_row_3, bn_row_4),
+                  nrow = 4, ncol = 7, byrow = TRUE) )
+bn.lay.s1 <- layout( bn_mat_s1 )
+layout.show( bn.lay.s1 )
+```
+
+
+##### **Blacktip**
+
+**Variable Order**
+
+| Depth | Temperature | Turbidity | Dissolved Oxygen | Salinity | Distance to Shore | Year |
+|:-----:|:-----------:|:---------:|:----------------:|:--------:|:-----------------:|:----:|
+|  1    |    2        |    3      |       4          |    5     |         6         |   7  |
+
+```{r strat1 Blacktip Model structures  Fig2, include = FALSE, eval=FALSE}
+## Blacktip
+    ## Strat 1
+ ## FA
+plot(mod_lst_s1$bt_mod_s1$bt_s1_FA_best, pages = 1)
+bt_row_1 <-   c( 0, 1, 2, 3, 4, 5, 6)
+            #  D, T, T, O, S, D, Y
+  ## FJ
+plot(mod_lst_s1$bt_mod_s1$bt_s1_FJ_best, pages = 1)
+bt_row_2 <- c( 7, 8, 9, 10, 0, 11, 12)
+            #  D, T, T, O, S, D, Y
+  ## MA
+plot(mod_lst_s1$bt_mod_s1$bt_s1_MA_best, pages = 1)
+bt_row_3 <- c( 13, 14, 15, 16, 0, 17, 18)
+            #  D, T, T, O, S, D, Y
+  ## MJ
+plot(mod_lst_s1$bt_mod_s1$bt_s1_MJ_best, pages = 1)
+bt_row_4 <- c( 0, 19, 20, 21, 22, 0, 23)
+            #  D, T, T, O, S, D, Y
+
+
+(bt_mat_s1 <- matrix(c(bt_row_1, bt_row_2, bt_row_3, bt_row_4),
+                  nrow = 4, ncol = 7, byrow = TRUE) )
+bt.lay.s1 <- layout( bt_mat_s1 )
+layout.show( bt.lay.s1 )
+```
+
+
+
+##### **Sharpnose**
+
+**Variable Order**
+
+| Depth | Temperature | Turbidity | Dissolved Oxygen | Salinity | Distance to Shore | Year |
+|:-----:|:-----------:|:---------:|:----------------:|:--------:|:-----------------:|:----:|
+|  1    |    2        |    3      |       4          |    5     |         6         |   7  |
+
+```{r strat1 Sharpnose Model structures Fig2, include = FALSE, eval=FALSE}
+## Sharpnose
+    ## Strat 1
+ ## FA
+plot(mod_lst_s1$sn_mod_s1$sn_s1_FA_best, pages = 1)
+sn_row_1 <- c( 1, 2, 3, 4, 5, 6, 7)
+            #  D, T, T, O, S, D, Y
+  ## FJ
+plot(mod_lst_s1$sn_mod_s1$sn_s1_FJ_best, pages = 1)
+sn_row_2 <- c( 8, 9, 10, 0, 0, 0, 11)
+            #  D, T, T, O, S, D, Y
+  ## MA
+plot(mod_lst_s1$sn_mod_s1$sn_s1_MA_best, pages = 1)
+sn_row_3 <- c( 12, 13, 14, 15, 16, 0, 17)
+            #  D, T, T, O, S, D, Y
+  ## MJ
+plot(mod_lst_s1$sn_mod_s1$sn_s1_MJ_best, pages = 1)
+sn_row_4 <- c( 18, 19, 0, 0, 20, 0, 21)
+            #  D, T, T, O, S, D, Y
+
+(sn_mat_s1 <- matrix(c(sn_row_1, sn_row_2, sn_row_3, sn_row_4),
+                  nrow = 4, ncol = 7, byrow = TRUE) )
+sn.lay.s1 <- layout( sn_mat_s1 )
+layout.show( sn.lay.s1 )
+```
+
+I will have to make a unique layout for each species. By looking at the formula of the best fit model I've determined which terms are included and will use this information to create a matrix for *layout()*.
+
+##### Figure 2 loop **Strat 1**
+
+```{r Layouts for Figure 2 strat 1, include = FALSE, eval=FALSE}
+  # Strat 1
+lay_mat_s1 <- list(bn_mat_s1,
+                   bt_mat_s1,
+                   sn_mat_s1
+                   )
+```
+
+```{r figure 2 strat 1 tiff file paths, include = FALSE, eval=FALSE}
+# Strata 1
+file_name_s1 <- numeric( length(lay_mat_s1) )
+
+letr_s1 <- letters[c(seq(1, 14, by = 2))]
+
+
+for(i in 1:length(file_name_s1) ){
+  
+  file_name_s1[i] <- paste0("6_figures\\figures\\Figure_2_(",letr_s1[i], ").tiff")
+}
+
+file_name_s1
+```
+
+```{r  Figure 2 prep strat 1, include=FALSE, eval=FALSE}
+
+cex_txt <- 1
+cex_lab <- 1.5
+cex_axis <- 1.25
+my_lwd <- 1.75
+y_line <- 1.25
+x_line <- 0
+
+letter_line <- 0
+letter_at <- 0
+
+sleep_time <- 0.01
+```
+
+```{r Figure 2 Strata 1 plots Loop, include=FALSE, eval = FALSE}
+# Strata 1
+
+for(i in 1:length(mod_lst_s1) ){ ## loop through species level of mod_lst_s1
+  
+  tiff(filename =  file_name_s1[i], height = 2000, width = 2500, res = 300)
+  
+  par(oma = c(1.5, 3.25, 1.5, 1), # two rows of text at the outer left and bottom margin
+    mar = c(1, 1, 1, 1), # space for one row of text at ticks and to separate plots
+    mgp = c(1.75, 0.75, 0))
+  
+  layout( lay_mat_s1[[i]] )
+  
+    
+    for(j in 1:length( mod_lst_s1[[i]] ) ){ ### loop through Sex, and Maturity level of mod_lst_s1 
+      
+      for(k in 2:8){ ## Loop through specific variables in each level of sex and maturity for specific species
+    
+    plot(mod_lst_s1[[i]][[j]], select = k,
+         scale = 0,
+         shade = TRUE,
+         xlab = "", ylab = "",
+         main = "",
+         lwd= my_lwd, 
+         cex.axis = cex_axis, 
+         cex.lab = cex_lab, 
+         bty = "n")
+    
+    abline( h = 0, col = "blue", lty = 3)  
+    
+    Sys.sleep(sleep_time)
+    
+    }
+      
+    }
+    Sys.sleep(sleep_time)
+    
+    
+  
+  
+  ### Y labels
+    mtext("Female Adult ",
+        side = 2, 
+        at = 0.875,
+        line = y_line,
+        cex = cex_txt, 
+        outer = TRUE)
+  
+    mtext("Female Juvenile",
+        side = 2,
+        at = 0.625,
+        line = y_line,
+        cex = cex_txt,
+        outer = TRUE)
+    
+      mtext("Male Adult",
+        side = 2, 
+        at = 0.375,
+        line = y_line,
+        cex = cex_txt,
+        outer = TRUE)
+      
+        mtext("Male Juvenile",
+        side = 2, 
+        at = 0.125,
+        line = y_line,
+        cex = cex_txt,
+        outer = TRUE)
+  ### X Labels
+        mtext("Depth",
+        side = 3, 
+        at = 1/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Temp",
+        side = 3, 
+        at = 3/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Turb",
+        side = 3, 
+        at = 5/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Oxy",
+        side = 3, 
+        at = 1/2,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Sal",
+        side = 3, 
+        at = 9/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Distance",
+        side = 3, 
+        at = 11/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+       
+         mtext("Year",
+        side = 3, 
+        at = 13/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+         ### Figure letter
+        mtext(paste0("(", letr_s1[i], ")"),
+        side = 3, 
+        at = letter_at,
+        line = letter_line,
+        cex = cex_txt,
+        outer = TRUE) 
+         
+        
+        Sys.sleep(sleep_time)
+        
+        dev.off()
+        
+}
+
+```
+
+
+
+
+#### **Strat 2** Figure 2
+
+```{r Load Best Strat 2 Models, eval = FALSE, include = FALSE}
+filenames_s2 <- list.files(c("output/output_GAM/best/blacknose/strat2",
+                             "output/output_GAM/best/blacktip/strat2",
+                             "output/output_GAM/best/sharpnose/strat2"), pattern="*.rda", full.names=TRUE)
+
+lapply(filenames_s2, load, .GlobalEnv)
+
+rm( filenames_s2 )
+
+
+### Create list of models
+
+mod_lst_s2 <- list(bn_mod_s2 = list( # Blacknose
+                                       bn_s2_FA_best = bn_s2_FA_best, ## bn s2
+                                       bn_s2_FJ_best = bn_s2_FJ_best,
+                                       bn_s2_MA_best = bn_s2_MA_best,
+                                       bn_s2_MJ_best = bn_s2_MJ_best
+                                       )
+                ,
+                bt_mod_s2 = list(    # Blacktip
+                                       bt_s2_FA_best = bt_s2_FA_best, ## bt s2
+                                       bt_s2_FJ_best = bt_s2_FJ_best,
+                                       bt_s2_MA_best = bt_s2_MA_best,
+                                       bt_s2_MJ_best = bt_s2_MJ_best
+                                       )
+                ,
+                sn_mod_s2 = list(    # Sharpnose
+                                       sn_s2_FA_best = sn_s2_FA_best, ## sn s2
+                                       sn_s2_FJ_best = sn_s2_FJ_best,
+                                       sn_s2_MA_best = sn_s2_MA_best,
+                                       sn_s2_MJ_best = sn_s2_MJ_best
+                                       )
+                )
+length(mod_lst_s2);names(mod_lst_s2)
+length(mod_lst_s2[[1]]);names(mod_lst_s2[[1]])
+length(mod_lst_s2[[2]]);names(mod_lst_s2[[2]])
+length(mod_lst_s2[[3]]);names(mod_lst_s2[[3]])
+
+
+rm(bn_s2_FA_best, bn_s2_FJ_best, bn_s2_MA_best, bn_s2_MJ_best
+   ,
+   bt_s2_FA_best, bt_s2_FJ_best, bt_s2_MA_best, bt_s2_MJ_best
+   ,
+   sn_s2_FA_best, sn_s2_FJ_best, sn_s2_MA_best, sn_s2_MJ_best)
+```
+
+
+##### **Blacknose**
+
+**Variable Order**
+
+| Depth | Temperature | Turbidity | Dissolved Oxygen | Salinity | Distance to Shore | Year |
+|:-----:|:-----------:|:---------:|:----------------:|:--------:|:-----------------:|:----:|
+|  1    |    2        |    3      |       4          |    5     |         6         |   7  |
+
+```{r Model structures Blacknose Fig2, include = FALSE, eval=FALSE}
+## Blacknose
+    ## Strat 2
+ ## FA
+plot(mod_lst_s2$bn_mod_s2$bn_s2_FA_best, pages = 1)
+bn_row_5 <- c( 0, 1, 0, 2, 0, 0, 3)
+            #  D, T, T, O, S, D, Y
+  ## FJ
+plot(mod_lst_s2$bn_mod_s2$bn_s2_FJ_best, pages = 1)
+bn_row_6 <- c( 0, 4, 0, 0, 5, 6, 7)
+            #  D, T, T, O, S, D, Y
+  ## MA
+plot(mod_lst_s2$bn_mod_s2$bn_s2_MA_best, pages = 1)
+bn_row_7 <- c( 8, 0, 0, 9, 10, 11, 12)
+            #  D, T, T, O, S, D, Y
+  ## MJ
+plot(mod_lst_s2$bn_mod_s2$bn_s2_MJ_best, pages = 1)
+bn_row_8 <- c( 0, 0, 13, 14, 15, 0, 16)
+            #  D, T, T, O, S, D, Y
+
+(bn_mat_s2 <- matrix(c(bn_row_5, bn_row_6, bn_row_7, bn_row_8),
+                  nrow = 4, ncol = 7, byrow = TRUE) )
+
+bn.lay.s2 <- layout( bn_mat_s2 )
+layout.show( bn.lay.s2 )
+```
+
+
+##### **Blacktip**
+
+**Variable Order**
+
+| Depth | Temperature | Turbidity | Dissolved Oxygen | Salinity | Distance to Shore | Year |
+|:-----:|:-----------:|:---------:|:----------------:|:--------:|:-----------------:|:----:|
+|  1    |    2        |    3      |       4          |    5     |         6         |   7  |
+
+```{r Blacktip Model structures  Fig2, include = FALSE, eval=FALSE}
+## Blacktip
+    ## Strat 2
+ ## FA
+plot(mod_lst_s2$bt_mod_s2$bt_s2_FA_best, pages = 1)
+bt_row_5 <- c( 0, 0, 0, 1, 2, 0, 3)
+            #  D, T, T, O, S, D, Y
+  ## FJ
+plot(mod_lst_s2$bt_mod_s2$bt_s2_FJ_best, pages = 1)
+bt_row_6 <- c( 4, 5, 6, 7, 8, 0, 9)
+            #  D, T, T, O, S, D, Y
+  ## MA
+plot(mod_lst_s2$bt_mod_s2$bt_s2_MA_best, pages = 1)
+bt_row_7 <- c( 10, 0, 0, 0, 11, 12, 13)
+            #  D, T, T, O, S, D, Y
+  ## MJ
+plot(mod_lst_s2$bt_mod_s2$bt_s2_MJ_best, pages = 1)
+bt_row_8 <- c( 14, 0, 15, 16, 17, 0, 18)
+            #  D, T, T, O, S, D, Y
+
+(bt_mat_s2 <- matrix(c(bt_row_5, bt_row_6, bt_row_7, bt_row_8),
+                  nrow = 4, ncol = 7, byrow = TRUE) )
+
+bt.lay.s2 <- layout( bt_mat_s2 )
+layout.show( bt.lay.s2 )
+```
+
+
+
+##### **Sharpnose**
+
+**Variable Order**
+
+| Depth | Temperature | Turbidity | Dissolved Oxygen | Salinity | Distance to Shore | Year |
+|:-----:|:-----------:|:---------:|:----------------:|:--------:|:-----------------:|:----:|
+|  1    |    2        |    3      |       4          |    5     |         6         |   7  |
+
+```{r Sharpnose Model structures Fig2, include = FALSE, eval=FALSE}
+## Sharpnose
+    ## Strat 2
+ ## FA
+plot(mod_lst_s2$sn_mod_s2$sn_s2_FA_best, pages = 1)
+sn_row_5 <- c( 1, 2, 3, 0, 0, 0, 4)
+            #  D, T, T, O, S, D, Y
+  ## FJ
+plot(mod_lst_s2$sn_mod_s2$sn_s2_FJ_best, pages = 1)
+sn_row_6 <- c( 0, 5, 6, 0, 0, 7, 8)
+            #  D, T, T, O, S, D, Y
+  ## MA
+plot(mod_lst_s2$sn_mod_s2$sn_s2_MA_best, pages = 1)
+sn_row_7 <- c( 9, 0, 10, 0, 0, 0, 11)
+            #  D, T, T, O, S, D, Y
+  ## MJ
+plot(mod_lst_s2$sn_mod_s2$sn_s2_MJ_best, pages = 1)
+sn_row_8 <- c( 0, 12, 0, 13, 14, 0, 15)
+            #  D, T, T, O, S, D, Y
+
+(sn_mat_s2 <- matrix(c(sn_row_5, sn_row_6, sn_row_7, sn_row_8),
+                  nrow = 4, ncol = 7, byrow = TRUE) )
+
+sn.lay.s2 <- layout( sn_mat_s2 )
+layout.show( sn.lay.s2 )
+```
+
+##### Figure 2 loop **Strat 2**
+
+```{r Layouts for Figure 2 , include = FALSE, eval=FALSE}
+# strat 2
+
+lay_mat_s2 <- list(bn_mat_s2,
+                   bt_mat_s2,
+                   sn_mat_s2
+                   )
+```
+
+```{r figure 2 tiff file paths, include = FALSE, eval=FALSE}
+# Strata 2
+
+file_name_s2 <- numeric( length(lay_mat_s2) )
+
+letr_s2 <- letters[c(seq(2, 14, by = 2))]
+
+for(i in 1:length(file_name_s2) ){
+  
+  file_name_s2[i] <- paste0("6_figures\\figures\\Figure_2_(",letr_s2[i], ").tiff")
+}
+
+file_name_s2
+```
+
+```{r  Figure 2 prep, eval=FALSE, include=FALSE}
+
+cex_txt <- 1
+cex_lab <- 1.5
+cex_axis <- 1.25
+my_lwd <- 1.75
+y_line <- 1.25
+x_line <- 0
+
+letter_line <- 0
+letter_at <- 0
+
+sleep_time <- 0.01
+
+```
+
+
+```{r  Figure 2 Strata 2 plots Loop, include=FALSE, eval = FALSE}
+# Strata 2
+for(i in 1:length(mod_lst_s2) ){ ### loop through species level in mod_lst_s2
+  
+  tiff(filename =  file_name_s2[i], height = 2000, width = 2500, res = 300)
+  
+  par(oma = c(1.5, 3.25, 1.5, 1), # two rows of text at the outer left and bottom margin
+    mar = c(1, 1, 1, 1), # space for one row of text at ticks and to separate plots
+    mgp = c(1.75, 0.75, 0))
+  
+  layout( lay_mat_s2[[i]] )
+  
+for(j in 1:length(mod_lst_s2[[i]])){ ## Loop through Sex and maturity levels for a species
+  
+  for(k in 2:8){ ## loop through explanatory variables in one level of sex and maturity for a species
+    
+    plot(mod_lst_s2[[i]][[j]], select = k,
+         scale = 0,
+         shade = TRUE,
+         xlab = "", ylab = "",
+         main = "",
+         lwd= my_lwd, 
+         cex.axis = cex_axis, 
+         cex.lab = cex_lab, 
+         bty = "n")
+    
+    abline( h = 0, col = "blue", lty = 3)    
+    
+  }   
+  
+} 
+  
+  
+  ### Y labels
+    mtext("Female Adult ",
+        side = 2, 
+        at = 0.875,
+        line = y_line,
+        cex = cex_txt, 
+        outer = TRUE)
+  
+    mtext("Female Juvenile",
+        side = 2,
+        at = 0.625,
+        line = y_line,
+        cex = cex_txt,
+        outer = TRUE)
+    
+      mtext("Male Adult",
+        side = 2, 
+        at = 0.375,
+        line = y_line,
+        cex = cex_txt,
+        outer = TRUE)
+      
+        mtext("Male Juvenile",
+        side = 2, 
+        at = 0.125,
+        line = y_line,
+        cex = cex_txt,
+        outer = TRUE)
+  ### X Labels
+        mtext("Depth",
+        side = 3, 
+        at = 1/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Temp",
+        side = 3, 
+        at = 3/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Turb",
+        side = 3, 
+        at = 5/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Oxy",
+        side = 3, 
+        at = 1/2,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Sal",
+        side = 3, 
+        at = 9/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Distance",
+        side = 3, 
+        at = 11/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+       
+         mtext("Year",
+        side = 3, 
+        at = 13/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+         ### Figure letter
+        mtext(paste0("(", letr_s2[i], ")"),
+        side = 3, 
+        at = letter_at,
+        line = letter_line,
+        cex = cex_txt,
+        outer = TRUE) 
+         
+        
+        Sys.sleep(sleep_time)
+        
+        dev.off()
+        
+}
+```
+
+![**Figure 2 a** Blacknose Strat 1](figures\Figure_2_(a).tiff)
+
+![**Figure 2 b** Blacknose  Strat 2](figures\Figure_2_(b).tiff)
+
+
+![**Figure 2 c** Blacktip Strat 1](figures\Figure_2_(c).tiff)
+
+![**Figure 2 d** Blacktip  Strat 2](figures\Figure_2_(d).tiff)
+
+
+![**Figure 2 e** Sharpnose Strat 1](figures\Figure_2_(e).tiff)
+
+![**Figure 2 f** Sharpnose  Strat 2](figures\Figure_2_(f).tiff)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

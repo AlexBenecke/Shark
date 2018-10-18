@@ -21,7 +21,6 @@ editor_options:
 knitr::opts_chunk$set(echo = FALSE, eval = FALSE, message = FALSE, results = "asis")
 ```
 
-
 ```{r Load Packages, eval=TRUE, include=FALSE}
 ### Load Packages
 library(FSA)
@@ -46,86 +45,6 @@ source("5_functions/load_data.R")
 ```
 
 ```{r Load Data, eval=TRUE, echo=FALSE, include=FALSE}
-### Blacknose
-blacknose <- read_csv_fn( "data/clean-data/blacknose.csv", proj) %>%
-  mutate(YEAR = factor(YEAR), 
-         MONTH = factor(strftime(DATE, format = "%b")))
-
-### Blacktip
-blacktip <- read_csv_fn( "data/clean-data/blacktip.csv", proj) %>%
-  mutate(YEAR = factor(YEAR), 
-         MONTH = factor(strftime(DATE, format = "%b")))
-
-### Bull
-bull <- read_csv_fn( "data/clean-data/bull.csv", proj) %>%
-  mutate(YEAR = factor(YEAR), 
-         MONTH = factor(strftime(DATE, format = "%b")))
-
-### Sandbar
-sandbar <- read_csv_fn( "data/clean-data/sandbar.csv", proj) %>%
-  mutate(YEAR = factor(YEAR), 
-         MONTH = factor(strftime(DATE, format = "%b")))
-
-### Sharpnose
-sharpnose <- read_csv_fn( "data/clean-data/sharpnose.csv", proj) %>%
-  mutate(YEAR = factor(YEAR), 
-         MONTH = factor(strftime(DATE, format = "%b")))
-
-### Silky
-silky <- read_csv_fn( "data/clean-data/silky.csv", proj) %>%
-  mutate(YEAR = factor(YEAR), 
-         MONTH = factor(strftime(DATE, format = "%b")))
-
-### Spinner
-spinner <- read_csv_fn( "data/clean-data/spinner.csv", proj) %>%
-  mutate(YEAR = factor(YEAR), 
-         MONTH = factor(strftime(DATE, format = "%b")))
-
-### Tiger
-tiger <- read_csv_fn( "data/clean-data/tiger.csv", proj) %>%
-  mutate(YEAR = factor(YEAR), 
-         MONTH = factor(strftime(DATE, format = "%b")))
-
-### Strata 1 list
-strat1 <- list(blacknose = blacknose,
-              blacktip = blacktip,
-              bull = bull,
-              sandbar = sandbar,
-              sharpnose = sharpnose,
-              silky = silky,
-              spinner = spinner,
-              tiger = tiger)
-
-
-### Strata 2 List
-
-
-strat2 <- list(blacknose = blacknose %>% subset(pres == 1),
-              blacktip = blacktip %>% subset(pres == 1),
-              bull = bull %>% subset(pres == 1),
-              sandbar = sandbar %>% subset(pres == 1),
-              sharpnose = sharpnose %>% subset(pres == 1),
-              silky = silky %>% subset(pres == 1),
-              spinner = spinner %>% subset(pres == 1),
-              tiger = tiger %>% subset(pres == 1))
-
-
-
-
-### Strata 2 List
-
-
-zero <- list(blacknose = blacknose %>% subset(pres == 0),
-              blacktip = blacktip %>% subset(pres == 0),
-              bull = bull %>% subset(pres == 0),
-              sandbar = sandbar %>% subset(pres == 0),
-              sharpnose = sharpnose %>% subset(pres == 0),
-              silky = silky %>% subset(pres == 0),
-              spinner = spinner %>% subset(pres == 0),
-              tiger = tiger %>% subset(pres == 0))
-
-####################
-
 eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj)
 
 eff3$count <- 1
@@ -133,136 +52,69 @@ eff3$count <- 1
 str(eff3)
 headtail(eff3)
 
-strat1_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 1)
-strat2_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 2)
+## Note pres must be numeric for table 1 >> I've been modifying the load_data with fact_vars if FALSE pres is not a factor variable (default is TRUE)
 
-strat1_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 1)
-strat2_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 2)
+strat1_Adult <- load_data(data = eff3[eff3$maturity == "A",] %>% droplevels(), strata = 1, fact_vars = FALSE)
+strat2_Adult <- load_data(data = eff3[eff3$maturity == "A",] %>% droplevels(), strata = 2, fact_vars = FALSE)
+
+strat1_Juvenile <- load_data(data = eff3[eff3$maturity == "J",] %>% droplevels(), strata = 1, fact_vars = FALSE)
+strat2_Juvenile <- load_data(data = eff3[eff3$maturity == "J",] %>% droplevels(), strata = 2, fact_vars = FALSE)
 ```
 
-```{r Remove Data, eval=FALSE, include=FALSE}
-rm(blacknose, blacktip, bull, sandbar, sharpnose, silky, spinner, tiger)
-```
-
-```{r Load Model Fits, eval=TRUE, include=FALSE}
+```{r Load Model Fits, eval=FALSE, include=FALSE}
 ### Strata1
-load( file = "output/output_GAM/best_strat1/bn1_best.rda" )
-load( file = "output/output_GAM/best_strat1/bt1_best.rda" )
-load( file = "output/output_GAM/best_strat1/bu1_best.rda" )
-load( file = "output/output_GAM/best_strat1/sb1_best.rda" )
-load( file = "output/output_GAM/best_strat1/sn1_best.rda" )
-load( file = "output/output_GAM/best_strat1/si1_best.rda" )
-load( file = "output/output_GAM/best_strat1/sp1_best.rda" )
-load( file = "output/output_GAM/best_strat1/ti1_best.rda" )
+  ## Female Adult
+filenames_s1_FA <- list.files("output/output_GAM/strat1/Female/Adult", pattern="*.rda", full.names=TRUE)
 
-s1 <- list(bn1_best = bn1_best
-,
-           bt1_best = bt1_best
-,
-           bu1_best = bu1_best
-,
-           sb1_best = sb1_best
-,
-           sn1_best = sn1_best
-,
-           si1_best = si1_best
-,
-           sp1_best = sp1_best
-,
-           ti1_best = ti1_best
-)
+for( i in 1:length( filenames_s1_FA ) ){ load( file = filenames_s1_FA[ i ] ) }
 
-
-
-
-### Fit time strat 1
-load(file = "output/output_GAM/strat1/time_fit_strat_1.rda")
-
-
-
-### Strata 2
-load( file = "output/output_GAM/best_strat2/bn_best.rda" )
-load( file = "output/output_GAM/best_strat2/bt_best.rda" )
-load( file = "output/output_GAM/best_strat2/bu_best.rda" )
-load( file = "output/output_GAM/best_strat2/sb_best.rda" )
-load( file = "output/output_GAM/best_strat2/sn_best.rda" )
-load( file = "output/output_GAM/best_strat2/si_best.rda" )
-load( file = "output/output_GAM/best_strat2/sp_best.rda" )
-load( file = "output/output_GAM/best_strat2/ti_best.rda" )
-
-s2 <- list(bn_best = bn_best
-,
-           bt_best = bt_best
-,
-           bu_best = bu_best
-,
-           sb_best = sb_best
-,
-           sn_best = sn_best
-,
-           si_best = si_best
-,
-           sp_best = sp_best
-,
-           ti_best = ti_best
-)
-
-### Fit time strat 2
-load(file = "output/output_GAM/strat2/time_fit_strat_2.rda")
-
+rm( filenames_s1_FA )
 
 ```
-
-```{r remove models, eval=TRUE}
-rm(bn_best, bt_best, bu_best, sb_best, sn_best, si_best, sp_best, ti_best, 
-   bn1_best, bt1_best, bu1_best, sb1_best, sn1_best, si1_best, sp1_best, ti1_best)
-```
-
 
 
 # List of Tables and Figures
 
 ## List of Tables
 
-1. summarize presence occurance (PA) and abundance (PRES)  of data used in analysis
-i. give number of zeros and number of data pointa for both strata (PA and PRES) and level MATURE IMATURE (MALE and FEMALE) and Species
-ii. Describe size cutoffs for Mature and Immature in captions
-iii. either by year or by grouping years?
-iv. Overall $\%$ of bottom long-line sets where a species of shark was present
+1. Table of number of positive catch stations for each species, year, sex, and where possible maturity.
+i. Overall $\%$ of bottom long-line sets where a species of shark was present
 
-2. List of variables and a description of each
-i. units
-ii. type Biotic? environmental
-iii. Temporal or spacial...
+
+2. Final list of Explanatory variables and results from QA/QC
+i. list all variables give description
+ii. was variable included or ommited (for species)
+iii. range, mean, sd, and missing data
+iv. Correlation between variables
+
 
 3. Model Selection
-i. Say top 2 or 3 models and global model for each species strata and level Mature immature (Male Female)
-ii. identify model (stage strata lavel M I M F...)
-iii. order best to worst + global model (A, B ... Global) 
-iv. Model structure
-v. Dev($\%$)
-vi. AIC (or BIC)
+i. Best model for each strata from each species and where possible level of Sex and Maturity
+ii. Model structure
+iii. Dev($\%$)
+iv. AIC (or BIC)
 
 
 ## List of Figures
 
 1. Site Map of northern Gulf of Mexico
-i. give depth contours
-ii. regions?
+i. give points where stations were sampled 
+    - black dots with white outlines
+ii. consider dividing gulf into regions (i.e., west, north, east)
 
-2. Smooth Fits for each variable by strata and maturity (Maybe Sex)
+
+2. Smooth Fits for each variable by strata and sex and maturity where possible
 i. display in table of plots Explanatory variables x and strata maturity (and Sex) on Y
 
+
 3. Heat Map showing CPUE by area in nGoM
-i. maybe show map with presence and abscense of each species aswell 
-ii. either species 4 rows by 2 columns Or consider year to year comparison of each species
+i. think about how to structure this to compare within not between species
+
 
 
 ## Tables ##
 
-### Table 1
-
-This should be a barplot
+### **Table 1**
 
 summarize presence occurance (PA) and abundance (PRES)  of data used in analysis
 
@@ -271,98 +123,37 @@ ii. Describe size cutoffs for Mature and Immature in captions
 iii. either by year or by grouping years?
 iv. Overall $\%$ of bottom long-line sets where a species of shark was present
 
-```{r Prepare table 1, eval=TRUE}
-Species <- c( "Blacknose", "Blacktip", "Bull", "Sandbar", 
-                  "Sharpnose", "Silky", "Spinner", "Tiger")
 
-for(i in 1:length(strat1)){
-  
-  strat1[[i]]$Species <- rep(Species[i], nrow(strat1[[i]]))
-  
-}
-
-all.df <- rbind(strat1[[1]], strat1[[2]], strat1[[3]],strat1[[4]],
-                 strat1[[5]], strat1[[6]], strat1[[7]], strat1[[8]]) %>%
-  select("Species", "YEAR", "pres")
-
-for(i in 1:nrow(all.df)){
-  
-  if(all.df$pres[i] == 0){
-    
-    all.df$absent[i] <- 1
-    
-  }else {
-    
-    all.df$absent[i] <- 0
-    
-  }
-  
-}
-
-
-all.df$tot <- all.df$pres + all.df$absent
-
-pres.df <- aggregate(pres ~ YEAR + Species, data = all.df, FUN = sum)
-
-zero.df <- aggregate(absent ~ YEAR + Species, data = all.df, FUN = sum)
-
-tot.df <- aggregate(tot ~ YEAR + Species, data = all.df, FUN = sum)
-
-tot.df$percent_pres <- round((pres.df$pres/tot.df$tot)*100, 2)
-
-table1 <- left_join(tot.df, pres.df, by = c("Species", "YEAR")) %>%
-  left_join(zero.df, by = c("Species", "YEAR")) %>%
-  select(Species, YEAR, pres, absent, tot, percent_pres) %>%
-  rename(Year = YEAR, Presence = pres, Absent = absent, "Percent Present" = percent_pres) 
-
-
-head(table1)
-
-
-#for(i in 1:length(Species)){
-#  
-#  assign(paste0("row_sp_", i),
-#         range(which(table1$Species == Species[i]))
-#)
-#  
-#}
-#row_sp_1
-#
-#row_sp_7
-```
-
-
-
-```{r Table 1, eval=TRUE}
-
-table1 %>%
-  kable() %>%
-  kable_styling(full_width = F, position = "center", font_size = 10) %>%
-  collapse_rows(1:2, valign = "top")
-  
-  
-  #group_rows(Species[1],row_sp_1[1], row_sp_1[2]) %>%
-  #group_rows(Species[2],row_sp_2[1], row_sp_2[2]) %>%
-  #group_rows(Species[3],row_sp_3[1], row_sp_3[2]) %>%
-  #group_rows(Species[4],row_sp_4[1], row_sp_4[2]) %>%
-  #group_rows(Species[5],row_sp_5[1], row_sp_5[2]) %>%
-  #group_rows(Species[6],row_sp_6[1], row_sp_6[2]) %>%
-  #group_rows(Species[7],row_sp_7[1], row_sp_7[2]) %>%
-  #group_rows(Species[8],row_sp_8[1], row_sp_8[2])
-  
-  
-  #collapse_rows(columns = 1:2, valign = "middle")
-
-
-```
-
-### Alt Table 1 a (n Pos catch stations)
+### Table 1  (n Pos catch stations)
 
 #### Table of Positive catch sites per year
-```{r Make Data frame for numver of sites with positive catch each year, results = 'hide', eval=TRUE, include=FALSE}
-Species <- levels(eff3$common)
+```{r Prep data for table 1, eval=TRUE}
+Species <- c("Blacknose", "Blacktip", "Sharpnose", "Sandbar", "Spinner", "Tiger", "Bull")
 
-for(i in 1:length( levels( eff3$common ) ) ){
+
+### for Blacknose, blacktip, and sharpnose with levels sex and maturity
+
+strat1_Adult <- load_data(data = eff3[eff3$maturity == "A",] %>% droplevels(), strata = 1, fact_vars = FALSE)
+strat2_Adult <- load_data(data = eff3[eff3$maturity == "A",] %>% droplevels(), strata = 2, fact_vars = FALSE)
+
+strat1_Juvenile <- load_data(data = eff3[eff3$maturity == "J",] %>% droplevels(), strata = 1, fact_vars = FALSE)
+strat2_Juvenile <- load_data(data = eff3[eff3$maturity == "J",] %>% droplevels(), strata = 2, fact_vars = FALSE)
+
+
+### for sandbar, spinner, tiger, and bull, with just sex
+
+strat1 <- load_data(data = eff3, strata = 1, fact_vars = FALSE)
+strat2 <- load_data(data = eff3, strata = 2, fact_vars = FALSE)
+
+```
+
+First I need to loop through blacknose, blacktip, and sharpnose and create a df with the number of positibe catch for each year sex and maturiti.
+
+```{r Make Data frame for number of sites with positive catch each year, results = 'hide', eval=TRUE, include=FALSE}
+
+### Sex amd Maturity
+
+for(i in 1:3 ){
   
  ## Female Adult
   aggregate(pres ~ year, data =strat1_Adult$Female[[i]], FUN = sum, drop = FALSE)[,"pres"] %>%
@@ -420,12 +211,67 @@ if(i == 1){
 
 
 pres.tbl <- tmp.df %>%
-  select(Species, Sex, Maturity, "2001":"2017")
+  dplyr::select(Species, Sex, Maturity, "2001":"2017")
 pres.tbl
 
 
 
-pres.tbl$Total <- apply(pres.tbl[,4:20], 1, FUN = sum)
+#pres.tbl$Total <- apply(pres.tbl[,4:20], 1, FUN = sum)
+#pres.tbl
+
+
+
+#pres.tbl
+
+```
+
+Now I need to loop through sandbar, Spinner, Tiger, and Bull and create a df with n pos catch for each year and sex.
+```{r make df with n pos catch stations each year only Sex and only sb sp ti bu, results = 'hide', eval=TRUE, include=FALSE}
+
+for(i in 4:7 ){
+  
+ ## Female 
+  aggregate(pres ~ year, data =strat1$Female[[i]], FUN = sum, drop = FALSE)[,"pres"] %>%
+    t() %>%
+    data.frame() %>%
+    mutate( Species = Species[i], Sex = "Female", Maturity = "") %>>%
+    (~tmp_F)
+  
+  colnames(tmp_F) <- c(seq(2001,2017,1), "Species", "Sex", "Maturity")
+
+
+ ## Male 
+  aggregate(pres ~ year, data =strat1$Male[[i]], FUN = sum, drop = FALSE)[,"pres"] %>%
+    t() %>%
+    data.frame() %>%
+    mutate( Species = Species[i], Sex = "Male", Maturity = "")  %>>%
+    (~tmp_M)
+  
+  colnames(tmp_M) <- c(seq(2001,2017,1), "Species", "Sex", "Maturity")
+
+if(i == 4){
+  
+  rbind(tmp_F, tmp_M) %>>%
+    (~tmp.df2)  
+  
+} else{
+  
+  rbind(tmp.df2, tmp_F, tmp_M) %>>%
+    (~tmp.df2)
+  
+}
+
+}
+
+pres.tbl2 <- tmp.df2 %>%
+  select(Species, Sex, Maturity, "2001":"2017")
+pres.tbl2
+
+pres.tbl <- rbind(pres.tbl, pres.tbl2) 
+
+pres.tbl
+
+pres.tbl$Total <- apply(pres.tbl[,c(4:20)], 1, FUN = sum)
 pres.tbl
 
 
@@ -434,10 +280,12 @@ pres.tbl
 
 ```
 
+Now lets add a bottom row with the number of stations sampled each year
+
 ```{r prep total sites row of pos catch table, results = 'hide', eval=TRUE, include=FALSE}
 
 ### Get total number of sites sampled each year
-aggregate(count ~ year, data =strat1_Adult$Female[[i]], FUN = sum, drop = FALSE)[,"count"] %>%
+aggregate(count ~ year, data =strat1_Adult$Female$sharpnose, FUN = sum, drop = FALSE)[,"count"] %>%
     t() %>%
     data.frame() %>%
     mutate( Species = "Total Stations", Sex = "", Maturity = "") %>>%
@@ -446,7 +294,7 @@ aggregate(count ~ year, data =strat1_Adult$Female[[i]], FUN = sum, drop = FALSE)
   colnames(all.sites.yr.sum) <- c(seq(2001,2017,1), "Species", "Sex", "Maturity")
 
 all.sites.yr.sum %<>%
-  select(Species, Sex, Maturity, "2001":"2017")
+  dplyr::select(Species, Sex, Maturity, "2001":"2017")
 
 all.sites.yr.sum
 
@@ -454,13 +302,11 @@ all.sites.yr.sum$Total <- apply(all.sites.yr.sum[,c(4:20)], 1, FUN = sum)
 
 all.sites.yr.sum
 
-all.sites.yr.sum
-
 
 pres.tbl <- rbind(pres.tbl, all.sites.yr.sum)
 pres.tbl
 
-#8-20-2018#write_csv_fn(pres.tbl, file = "data/clean-data/table-data/pres_tbl.csv", proj = proj)
+#10-15-2018#write_csv_fn(pres.tbl, file = "data/clean-data/table-data/pres_tbl.csv", proj = proj)
 
 ```
 
@@ -474,13 +320,14 @@ pres.tbl %>%
   column_spec(1, bold = T, background = "White") %>%
   column_spec(2, background = "White") %>%
   column_spec(21, border_left = T) %>%
-  collapse_rows(c(1:3), valign = "middle")
+  collapse_rows(c(1:2), valign = "middle")# %>%
+  #save_kable(file = "Table1.html", self_contained = T)
 ```
 
 
 ### Alt Table 1 b (Percent of Stations with Pos Catch)
 
-```{r Prep Percent pos catch table, results='hide', eval=TRUE, include=FALSE}
+```{r Prep Percent pos catch table, results='hide', eval=FALSE, include=FALSE}
 all.sites.yr.sum <- pres.tbl[29,-c(22:23)]
 row.names(all.sites.yr.sum) <- c(1)         
 
@@ -510,7 +357,7 @@ percent.pres.tbl
 
 ```
 
-```{r Make table of Percent positive of each species by year, eval=TRUE, include=TRUE}
+```{r Make table of Percent positive of each species by year, eval=FALSE, include=TRUE}
 percent.pres.tbl %>%
   kable() %>%
   kable_styling(full_width = F, 
@@ -523,7 +370,7 @@ percent.pres.tbl %>%
   collapse_rows(c(1:3), valign = "middle")
 ```
 
-### Table 2
+### **Table 2**
 
 *List of variables and a description of each*
 
@@ -531,26 +378,84 @@ i. units
 ii. type Biotic? environmental
 iii. Temporal or spacial...
 
+```{r, include=FALSE}
+
+length(unique(strat1_Adult$Male$sharpnose$stationkey))
+length(unique(strat1_Adult$Male$blacknose$stationkey))
+
+```
+
+
+
+
 ```{r, results='hide', eval=TRUE, include=FALSE}
 head(strat1_Adult$Male$sharpnose)
 
-var.tbl <- eff3 %>%
-  select(year, startlat, startlon, startdepth, tempbotm, fluorobotm, turbbotm, oxybotm, salbotm, Dis.to.SHORE, CPUE, Adj.CPUE)
+var.tbl <- strat1_Adult$Male$sharpnose %>%
+  select( startdepth, tempbotm, turbbotm, oxybotm, salbotm, Dis.to.Shore ) %>%
+  rename("Depth" = startdepth, "Temperature" = tempbotm, "Turbidity" = turbbotm, "Dissolved Oxygen" = oxybotm, 
+         "Salinity" = salbotm, "Distance to Shore" = Dis.to.Shore)
+
 
 head(var.tbl)
-
+nrow(var.tbl)
 length(var.tbl)
 
 
 
-Min <- round(apply(var.tbl, 2, FUN =  min, na.rm = T),0)
-Max <- round(apply(var.tbl, 2, FUN =  max, na.rm = T),0)
-Mean <- round(apply(var.tbl, 2, FUN =  mean, na.rm = T),0)
-SD <- round(apply(var.tbl, 2, FUN =  sd, na.rm = T),0)
+Min <- round(apply(var.tbl, 2, FUN =  min, na.rm = T),1)
+Max <- round(apply(var.tbl, 2, FUN =  max, na.rm = T),1)
+Mean <- round(apply(var.tbl, 2, FUN =  mean, na.rm = T),1)
+SD <- round(apply(var.tbl, 2, FUN =  sd, na.rm = T),1)
+
+
+( Missing <- numeric( length( var.tbl ) ))
+
+for(i in 1:length( var.tbl ) ){
+  
+  Missing[i] <- round( (length( which( is.na( var.tbl[i] ) == TRUE) )/ nrow(var.tbl)) * 100, 1)
+  
+}
+  
+
+Missing
+ 
 
 var.tbl.2 <- rbind(Min, Max, Mean, SD) %>% t() %>% data.frame()
 
 var.tbl.2
+```
+```{r correlation of variables, eval=TRUE,}
+
+(cor.tbl <- round( cor(var.tbl, use = "complete.obs"), 2) %>% data.frame())
+
+str(cor.tbl)
+
+var.tbl.2 <- var.tbl.2
+
+
+var.tbl.2$Depth <- ""#numeric( nrow( var.tbl.2 ) )
+var.tbl.2$Temperature <- ""#numeric( nrow( var.tbl.2 ) )
+var.tbl.2$Turbidity <- ""#numeric( nrow( var.tbl.2 ) )
+var.tbl.2$'Dissolved Oxygen' <- ""#numeric( nrow( var.tbl.2 ) )
+var.tbl.2$Salinity <- ""#numeric( nrow( var.tbl.2 ) )
+var.tbl.2$'Distance to Shore' <- ""#numeric( nrow( var.tbl.2 ) )
+#var.tbl.2$Fluorometry <- ""#numeric( nrow( var.tbl.2 ) )
+
+
+var.tbl.2[1,c(5:10)] <- cor.tbl$Depth
+var.tbl.2[2,c(6:10)] <- cor.tbl$Temperature[c(2:6)]
+var.tbl.2[3,c(7:10)] <- cor.tbl$Turbidity[c(3:6)]
+var.tbl.2[4,c(8:10)] <- cor.tbl$Dissolved.Oxygen[c(4:6)]
+var.tbl.2[5,c(9:10)] <- cor.tbl$Salinity[c(5:6)]
+var.tbl.2[6,c(10:10)] <- cor.tbl$Distance.to.Shore[c(6)]
+#var.tbl.2[7,c(12)] <- cor.tbl$Fluorometry[c(7)]
+
+
+var.tbl.2
+
+#10-10-2018#write_csv_fn(var.tbl.2, file = "data/clean-data/table-data/Table2.csv", row.names = TRUE, proj = proj)
+
 ```
 
 
@@ -560,11 +465,13 @@ var.tbl.2 %>%
   kable_styling(full_width = F, 
                 position = "center", 
                 font_size = 10,
-                bootstrap_options = "striped") 
+                bootstrap_options = "striped") %>%
+  add_header_above(c(" " = 5, "Correlation Table" = 6)) #%>%
+  #save_kable(file = "Table2.html", self_contained = T)
 ```
 
 
-### Table 3 Model Selecton
+### **Table 3** Model Selecton
 
 Model Selection
 
@@ -575,133 +482,246 @@ iv. Model structure
 v. Dev($\%$)
 vi. AIC (or BIC)
 
-
-#### Strata 1 Table 3
-
-```{r Set up Table 3, eval=TRUE}
-Species <- c( "Blacknose", "Blacktip", "Bull", "Sandbar", 
-                  "Sharpnose", "Silky", "Spinner", "Tiger") %>%
-  factor()
-
-Strata = c("Presence", "Abundance") %>%
-  factor()
-
-Maturity = c("Mixed", "Immature") %>%
-  factor()  
-
-Mod_levs <- c("s1M", "s1I", "s2M", "s2I")
-
-for(i in 1:length(Mod_levs)){
-  
-  assign(paste0("Optimal_Model_", Mod_levs[i]),
-         numeric(8))
-  
-  assign(paste0("Dev_", Mod_levs[i]),
-         numeric(8))
-  
-  assign(paste0("AIC_", Mod_levs[i]),
-         numeric(8))     
-  
-}
+**Note:** I run into memory problems if I try to load all the best models at once so I will build the table in parts by species and remove the models after comleting one part. I will then just have to combine the various table parts to one table with all species.
 
 
-for(i in 1:length(s1)){
+#### **Blacknose**
+```{r Load Blacknose models for table 3, eval=TRUE, include=FALSE}
+## Blacknose
+filenames_bn <- list.files(c("output/output_GAM/best/blacknose/strat1",
+                             "output/output_GAM/best/blacknose/strat2"), pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_bn ) ){ 
   
-  ### S1 Mature
-  Optimal_Model_s1M[i] <- paste(c("Pres", paste( rownames(summary(s1[[i]])$s.table), collapse = " + ")),
-                               collapse = " ~ ")
-  Dev_s1M[i] <- summary(s2[[i]])$dev.expl *100
-  AIC_s1M[i] <- s2[[i]]$aic
-  
-  ### S1 Immature
-  Optimal_Model_s1I[i] <- NA
-  Dev_s1I[i] <- NA
-  AIC_s1I[i] <- NA
-                       
-  
-  ### S2 Mature
-  Optimal_Model_s2M[i] <- paste(c("(CPUE +1)", paste( rownames(summary(s2[[i]])$s.table), collapse = " + ")),
-                               collapse = " ~ ")
-  Dev_s2M[i] <- summary(s2[[i]])$dev.expl *100
-  AIC_s2M[i] <- s2[[i]]$aic
-  
-  ### S2 Immature
-  Optimal_Model_s2I[i] <- NA
-  Dev_s2I[i] <- NA
-  AIC_s2I[i] <- NA 
+  load( file = filenames_bn[ i ] ) 
   
   }
 
-### Strata 1
-tmp.s1M <- data.frame(Species = Species,
-                     Strata = Strata[1],
-                     Maturity = Maturity[1], 
-                     Optimal_Model = Optimal_Model_s1M,
-                     Dev = Dev_s1M,
-                     AIC = AIC_s1M)
-tmp.s1I <- data.frame(Species = Species,
-                     Strata = Strata[1],
-                     Maturity = Maturity[2], 
-                     Optimal_Model = Optimal_Model_s1I,
-                     Dev = Dev_s1I,
-                     AIC = AIC_s1I)
+rm( filenames_bn, i )
 
-### Strata 2 
-tmp.s2M <- data.frame(Species = Species,
-                     Strata = Strata[2],
-                     Maturity = Maturity[1], 
-                     Optimal_Model = Optimal_Model_s2M,
-                     Dev = Dev_s2M,
-                     AIC = AIC_s2M)
-tmp.s2I <- data.frame(Species = Species,
-                     Strata = Strata[2],
-                     Maturity = Maturity[2], 
-                     Optimal_Model = Optimal_Model_s2I,
-                     Dev = Dev_s2I,
-                     AIC = AIC_s2I)
+mod_lst <- list(bn_s1_FA_best = bn_s1_FA_best, ## bn s1
+                bn_s1_FJ_best = bn_s1_FJ_best,
+                bn_s1_MA_best = bn_s1_MA_best,
+                bn_s1_MJ_best = bn_s1_MJ_best
+                ,
+                bn_s2_FA_best = bn_s2_FA_best, ## bn s2
+                bn_s2_FJ_best = bn_s2_FJ_best,
+                bn_s2_MA_best = bn_s2_MA_best,
+                bn_s2_MJ_best = bn_s2_MJ_best)
 
-### Table 2 data frame
-table3 <- rbind(tmp.s1M, tmp.s1I,
-                tmp.s2M, tmp.s2I) %>%
-  arrange(Species)
+rm(bn_s1_FA_best, bn_s1_FJ_best, bn_s1_MA_best, bn_s1_MJ_best, 
+   bn_s2_FA_best, bn_s2_FJ_best, bn_s2_MA_best, bn_s2_MJ_best)
+```
 
-table3$Dev <- round(table3$Dev, 1)
-table3$AIC <- round(table3$AIC, 1)
+```{r Set up Table 3 for Blacknose, eval=TRUE, include=FALSE}
+model <- numeric( length(mod_lst) )
+dev <- numeric( length(mod_lst) )
+aic <- numeric( length(mod_lst) )
+
+
+for(i in 1:length(mod_lst)){
+  
+  strsplit(as.character(mod_lst[[i]]$formula), "~")[[2]] %>>% (~response)
+  
+  model[i] <- paste(c(response, paste( c(rownames( summary( mod_lst[[i]] )$s.table ), mod_lst[[i]]$pterms[[3]]), collapse = " + ")), collapse = " ~ ")
+  
+  dev[i] <- round(summary(mod_lst[[i]])$dev.expl *100, 2)
+  
+  aic[i] <- round(mod_lst[[i]]$aic, 2)
+}
+
+model
+dev
+aic
+
+(Species <- rep(c("Blacknose"), each = 8, length.out = length(mod_lst) ) )
+
+(Strata <- rep(c("Presence", "Abundance"), each = 4))
+
+(Sex <- rep(c("Female", "Male"), each = 2, length.out = length(mod_lst) ) )
+
+(Maturity <- rep(c("Adult", "Juvenile"), length.out = length(mod_lst) ) )
+
+
+(table3_bn <- cbind(Species, Strata, Sex, Maturity, model, dev, aic) %>%
+    data.frame() %>%
+    rename(Model = model, "Dev. Expl. (%)" = dev, AIC = aic))
+
+rm( model, dev, aic, response, Species, 
+    Strata, Sex, Maturity, mod_lst, i )
 ```
 
 
 
+#### **Blacktip**
+```{r Load Blacktip  models for table 3, eval=TRUE, include=FALSE}
+## Blacktip
+filenames_bt <- list.files(c("output/output_GAM/best/blacktip/strat1",
+                             "output/output_GAM/best/blacktip/strat2"), pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_bt ) ){ 
+  
+  load( file = filenames_bt[ i ] ) 
+  
+  }
+rm( filenames_bt, i )
+
+mod_lst <- list(bt_s1_FA_best = bt_s1_FA_best, ## bt s1
+                bt_s1_FJ_best = bt_s1_FJ_best,
+                bt_s1_MA_best = bt_s1_MA_best,
+                bt_s1_MJ_best = bt_s1_MJ_best
+                ,
+                bt_s2_FA_best = bt_s2_FA_best, ## bt s2
+                bt_s2_FJ_best = bt_s2_FJ_best,
+                bt_s2_MA_best = bt_s2_MA_best,
+                bt_s2_MJ_best = bt_s2_MJ_best)
+
+rm(bt_s1_FA_best, bt_s1_FJ_best, bt_s1_MA_best, bt_s1_MJ_best, 
+   bt_s2_FA_best, bt_s2_FJ_best, bt_s2_MA_best, bt_s2_MJ_best)
+```
+
+
+
+```{r Set up Table 3 for Blacktip, eval=TRUE, include=FALSE}
+model <- numeric( length(mod_lst) )
+dev <- numeric( length(mod_lst) )
+aic <- numeric( length(mod_lst) )
+
+
+for(i in 1:length(mod_lst)){
+  
+  strsplit(as.character(mod_lst[[i]]$formula), "~")[[2]] %>>% (~response)
+  
+  model[i] <- paste(c(response, paste( c(rownames( summary( mod_lst[[i]] )$s.table ), mod_lst[[i]]$pterms[[3]]), collapse = " + ")), collapse = " ~ ")
+  
+  dev[i] <- round(summary(mod_lst[[i]])$dev.expl *100, 2)
+  
+  aic[i] <- round(mod_lst[[i]]$aic, 2)
+}
+
+model
+dev
+aic
+
+(Species <- rep(c("Blacktip"), each = 8, length.out = length(mod_lst) ) )
+
+(Strata <- rep(c("Presence", "Abundance"), each = 4))
+
+(Sex <- rep(c("Female", "Male"), each = 2, length.out = length(mod_lst) ) )
+
+(Maturity <- rep(c("Adult", "Juvenile"), length.out = length(mod_lst) ) )
+
+
+(table3_bt <- cbind(Species, Strata, Sex, Maturity, model, dev, aic) %>%
+    data.frame() %>%
+    rename(Model = model, "Dev. Expl. (%)" = dev, AIC = aic))
+
+rm( model, dev, aic, response, Species, 
+    Strata, Sex, Maturity, mod_lst, i )
+```
+
+
+#### **Sharpnose**
+```{r Load Sharpnose models for table 3, eval=TRUE, include=FALSE}
+## Sharpnose
+filenames_sn <- list.files(c("output/output_GAM/best/sharpnose/strat1",
+                             "output/output_GAM/best/sharpnose/strat2"), pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_sn ) ){ 
+  
+  load( file = filenames_sn[ i ] ) 
+  
+  }
+
+rm( filenames_sn, i )
+
+
+mod_lst <- list(sn_s1_FA_best = sn_s1_FA_best, ## sn s1
+                sn_s1_FJ_best = sn_s1_FJ_best,
+                sn_s1_MA_best = sn_s1_MA_best,
+                sn_s1_MJ_best = sn_s1_MJ_best
+                ,
+                sn_s2_FA_best = sn_s2_FA_best, ## sn s2
+                sn_s2_FJ_best = sn_s2_FJ_best,
+                sn_s2_MA_best = sn_s2_MA_best,
+                sn_s2_MJ_best = sn_s2_MJ_best)
+
+rm(sn_s1_FA_best, sn_s1_FJ_best, sn_s1_MA_best, sn_s1_MJ_best, 
+   sn_s2_FA_best, sn_s2_FJ_best, sn_s2_MA_best, sn_s2_MJ_best)
+```
+
+```{r Set up Table 3 for Sharpnose, eval=TRUE, include=FALSE}
+model <- numeric( length(mod_lst) )
+dev <- numeric( length(mod_lst) )
+aic <- numeric( length(mod_lst) )
+
+
+for(i in 1:length(mod_lst)){
+  
+  strsplit(as.character(mod_lst[[i]]$formula), "~")[[2]] %>>% (~response)
+  
+  model[i] <- paste(c(response, paste( c(rownames( summary( mod_lst[[i]] )$s.table ), mod_lst[[i]]$pterms[[3]]), collapse = " + ")), collapse = " ~ ")
+  
+  dev[i] <- round(summary(mod_lst[[i]])$dev.expl *100, 2)
+  
+  aic[i] <- round(mod_lst[[i]]$aic, 2)
+}
+
+model
+dev
+aic
+
+(Species <- rep(c("Sharpnose"), each = 8, length.out = length(mod_lst) ) )
+
+(Strata <- rep(c("Presence", "Abundance"), each = 4))
+
+(Sex <- rep(c("Female", "Male"), each = 2, length.out = length(mod_lst) ) )
+
+(Maturity <- rep(c("Adult", "Juvenile"), length.out = length(mod_lst) ) )
+
+
+(table3_sn <- cbind(Species, Strata, Sex, Maturity, model, dev, aic) %>%
+    data.frame() %>%
+    rename(Model = model, "Dev. Expl. (%)" = dev, AIC = aic))
+
+rm( model, dev, aic, response, Species, 
+    Strata, Sex, Maturity, mod_lst, i )
+```
+
+
+
+#### Combined table 3
+
+```{r Set up Table 3, eval=TRUE, include=FALSE}
+(table3 <- rbind(table3_bn, table3_bt, table3_sn))
+
+#9-14-2018#write.csv(table3, file = "6_figures/tables/table_3.csv", row.names = FALSE)
+
+rm(table3_bn, table3_bt, table3_sn)
+```
 
 ```{r Table 3, eval=TRUE, include=TRUE}
+library(kableExtra)
+
 table3 %>%
   kable() %>%
-  kable_styling(font_size = 10) %>%
+  kable_styling(full_width = F, 
+                position = "center",
+                font_size = 10) %>%
   collapse_rows(columns = 1:3, valign = "middle")
 ```
 
-
-### Table 4 GAM Results
-
-i. identify model (stage strata lavel M I M F...)
-ii. list variables
-iii. Range (rank)
-iv. EDF
-v. Trend (e.g., down, up (peak 2007), down...)
-vi. consider seperate table for each strata and/or species maybe even model IDK see how this looks.
-
-
-
-I think Table 3 covers this pretty well
-
 ```{r}
-
+rm(table3)
 ```
+
+
 
 
 ## Figures ##
 
 
-### Figure 1 Site Map of northern Gulf of Mexico
+### **Figure 1** Site Map of northern Gulf of Mexico
 
 Meg says to scrap this. 
   Use dots to represent stations and size (or transparensy) to represent number of stations
@@ -709,7 +729,7 @@ Meg says to scrap this.
   make water lighter grey no depth contours
   
 #### New Figure 1
-```{r}
+```{r, eval=FALSE, include=FALSE}
 my_xlim <- c( -97, -81.5) #c(-97.5, -81)
 
 my_ylim <- c( 24.5, 30.5 )
@@ -719,7 +739,7 @@ x_ticks <- seq( -97, -81.5 )
 y_ticks <- round( seq( 24.5, 30.5, length.out = 5 ), 1 )
 
 
-cex_pts <- 0.425
+cex_pts <- 0.8
 col_pts <- rgb( 0.25, 0.25, 0.25, 0.25 ) ### only for Strata 1
 cex_legend <- 1.25
 
@@ -730,7 +750,7 @@ cex_mtxt <- 1.5
 Lon_line <- 2
 Lat_line <- 2.75
 ```
-```{r}
+```{r, include=FALSE}
 require(maptools)
 require(sp)
 library(rgdal)
@@ -739,29 +759,44 @@ library(lubridate)
 gulf.shape <- "shape-file\\Shape\\stateshigh.shp"
 gulf.shape <- maptools::readShapePoly(gulf.shape)
 ```
-```{r study area line, eval = TRUE}
-study_area <- read.csv(file = "study_area.csv")
-study_area2 <- read.csv(file = "study_area2.csv")
-```
 
-```{r tiff for new figure 1}
+```{r tiff for new figure 1, include=FALSE}
 tiff(filename = "6_figures\\figures\\Figure_1.tiff", width = 4000,  height = 2000, res = 300)
 ```
 
-```{r New Figure 1}
+```{r New Figure 1, include=FALSE}
 par(oma = c(2.75, 3.5, 0, 0), # two rows of text at the outer left and bottom margin
     mar = c(0.5, 0.5, 0, 0), # space for one row of text at ticks and to separate plots
     mgp = c(2, 0.75, 0))
 
-plot(study_area$x,study_area$y,
-         xlim = c( -97, -81.5),
-         ylim = my_ylim,
-         xlab = "", ylab = "",
-         xaxt = "n", yaxt = "n",
-     type = "n",
-     bty = "n")
+plot(startlat ~ startlon,
+     data = eff3,
+     xlim = c(-97,-81.5),
+     ylim = my_ylim,
+     cex = cex_pts,
+     pch = 21,
+     bg = "Black",
+     col = "white", 
+     xlab = "", ylab = "",
+     xaxt = "n", yaxt = "n",
+     bty = "n",
+     type = "n")
 
-rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "gray98")
+rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "gray98", border = "white")
+
+par(new = T)
+
+plot(startlat ~ startlon,
+     data = eff3,
+     xlim = c(-97,-81.5),
+     ylim = my_ylim,
+     cex = cex_pts,
+     pch = 21,
+     bg = "Black",
+     col = "white", 
+     xlab = "", ylab = "",
+     xaxt = "n", yaxt = "n",
+     bty = "n")
 
 sp::plot(gulf.shape, add = T,
          xlim = c( -97, -81.5),
@@ -771,8 +806,8 @@ sp::plot(gulf.shape, add = T,
          col = "gray",
          bty="n")
 
-polygon(c(study_area$x,study_area2$x),  c(study_area$y, study_area2$y), density = 5, angle = 135, border = rgb(1,1,1,0), lty = 3, lwd = 1.25)
-polygon(c(study_area$x,study_area2$x),  c(study_area$y, study_area2$y), density = 5, angle = 45, border = rgb(1,1,1,0), lty = 3, lwd = 1.25)
+#polygon(c(study_area$x,study_area2$x),  c(study_area$y, study_area2$y), density = 5, angle = 135, border = rgb(1,1,1,0), lty = 3, lwd = 1.25)
+#polygon(c(study_area$x,study_area2$x),  c(study_area$y, study_area2$y), density = 5, angle = 45, border = rgb(1,1,1,0), lty = 3, lwd = 1.25)
 
 
 axis(2,
@@ -797,10 +832,11 @@ mtext("Longitude",
       cex = cex_mtxt)
 
 
-#dev.off()
+dev.off()
 
 ```
 
+![Figure 1 Site Map](figures\Figure_1.tiff)
 
 
 #### Old Figure 1
@@ -808,7 +844,7 @@ mtext("Longitude",
 i. give depth contours
 ii. regions?
 
-```{r Load shapefiles for Figure 1, eval = TRUE}
+```{r Load shapefiles for Figure 1, eval = FALSE, include=FALSE}
 require(maptools)
 require(sp)
 library(rgdal)
@@ -855,7 +891,7 @@ for(i in 1:length(gulf.bath)){
 }
 ```
 
-```{r Figure 1 Prep, eval = TRUE}
+```{r Figure 1 Prep, eval = FALSE, include=FALSE}
 #x1 <- c(-98.72202, 79.78476)
 #y1 <- c( 19.54442, 31.43526)
 y_ticks <- round(seq(24.5, 30.5, length.out = 5),1)
@@ -901,21 +937,22 @@ my_col
 
 ```
 
-```{r study area line, eval = TRUE}
-study_area <- read.csv(file = "study_area.csv")
-study_area2 <- read.csv(file = "study_area2.csv")
+```{r study area line, eval = FALSE, include=FALSE}
+study_area <- read_csv_fn("data/study_area.csv", proj)
+study_area2 <- read_csv_fn("data/study_area2.csv", proj)
 ```
 
-```{r tiff Figure 1}
+```{r tiff Figure 1, include=FALSE}
 tiff(filename = "6_figures\\figures\\Figure_1.tiff", width = 4000,  height = 2000, res = 300)
 ```
 
-```{r Plotting Figure 1, eval = TRUE}
+
+```{r Plotting Figure 1, eval = FALSE, include=FALSE}
 par(oma = c(2.75, 3.5, 0, 0), # two rows of text at the outer left and bottom margin
     mar = c(0.5, 0.5, 0, 0), # space for one row of text at ticks and to separate plots
     mgp = c(2, 0.75, 0))    # axis label at 2 rows distance, tick labels at 1 row
 
-sp::plot(country,
+sp::plot(country, add = T,
          ylim = c(24.5,29.5),
          xlim = c(-98, -81),
          bty="n",
@@ -971,328 +1008,211 @@ polygon(c(study_area$x,study_area2$x),  c(study_area$y, study_area2$y), density 
 dev.off()    
 ```
 
-```{r}
-
-my_xlim <- c(-100.3285, -78.7525)
-my_ylim <- c(6.885863,31.158893)
-
-
-sp::plot(country,
-         ylim = my_ylim,
-         xlim = my_xlim,
-         bty="n",
-         col = "WHITE")
-
-i =1
-sp::plot(gulf.bath[[i]], add =T,
-         xlab = "", ylab = "",
-         yaxt = "n", xaxt = "n",
-         xlim = my_xlim, ylim = my_ylim,
-         col = my_col[i])
-
-i =2
-sp::plot(gulf.bath[[i]], add =T,
-         xlab = "", ylab = "",
-         yaxt = "n", xaxt = "n",
-         xlim = my_xlim, ylim = my_ylim,
-         col = my_col[i])
-
-i =3
-sp::plot(gulf.bath[[i]], add =T,
-         xlab = "", ylab = "",
-         yaxt = "n", xaxt = "n",
-         xlim = my_xlim, ylim = my_ylim,
-         col = my_col[i])
-
-i =4
-sp::plot(gulf.bath[[i]], add =T,
-         xlab = "", ylab = "",
-         yaxt = "n", xaxt = "n",
-         xlim = my_xlim, ylim = my_ylim,
-         col = my_col[i])
-
-i =5
-sp::plot(gulf.bath[[i]], add =T,
-         xlab = "", ylab = "",
-         yaxt = "n", xaxt = "n",
-         xlim = my_xlim, ylim = my_ylim,
-         col = my_col[i])
-### Outside gulf here on
-i =6
-sp::plot(gulf.bath[[i]], add =T,
-         xlab = "", ylab = "",
-         yaxt = "n", xaxt = "n",
-         xlim = my_xlim, ylim = my_ylim,
-         col = my_col[i])
-
-i =7
-sp::plot(gulf.bath[[i]], add =T,
-         xlab = "", ylab = "",
-         yaxt = "n", xaxt = "n",
-         xlim = my_xlim, ylim = my_ylim,
-         col = my_col[i])
-
-i =8
-sp::plot(gulf.bath[[i]], add =T,
-         xlab = "", ylab = "",
-         yaxt = "n", xaxt = "n",
-         xlim = my_xlim, ylim = my_ylim,
-         col = my_col[i])
-
-i =9
-sp::plot(gulf.bath[[i]], add =T,
-         xlab = "", ylab = "",
-         yaxt = "n", xaxt = "n",
-         xlim = my_xlim, ylim = my_ylim,
-         col = my_col[i])
-
-i = 10
-sp::plot(gulf.bath[[i]], add =T,
-         xlab = "", ylab = "",
-         yaxt = "n", xaxt = "n",
-         xlim = my_xlim, ylim = my_ylim,
-         col = my_col[i])
-
-i = 11
-sp::plot(gulf.bath[[i]], add =T,
-         xlab = "", ylab = "",
-         yaxt = "n", xaxt = "n",
-         xlim = my_xlim, ylim = my_ylim,
-         col = my_col[i])
-
-i = 12
-sp::plot(gulf.bath[[i]], add =T,
-         xlab = "", ylab = "",
-         yaxt = "n", xaxt = "n",
-         xlim = my_xlim, ylim = my_ylim,
-         col = my_col[i])
-
-```
 
 
 
-![Figure 3 Strat 1](figures\\Figure_1.tiff)
 
-### Figure 2  Smooth Fits for each variable by strata and maturity (Maybe Sex)
+
+
+
+
+### **Figure 2**  Smooth Fits for each variable by strata and maturity (Maybe Sex)
 
 i. display in table of plots Explanatory variables x and strata maturity (and Sex) on Y
 
 Multiple species either multiple plots or overplotted with each other???
 
+#### **Strat 1**
 
-```{r Load  Best Models, eval = FALSE, include = FALSE}
-### Strata1
+```{r Load Best Strat 1 Models, eval = FALSE, include = FALSE}
+filenames_s1 <- list.files(c("output/output_GAM/best/blacknose/strat1",
+                             "output/output_GAM/best/blacktip/strat1"
+                             ,"output/output_GAM/best/sharpnose/strat1"
+                             )
+                           , pattern="*.rda", full.names=TRUE)
 
-load(file = "output/output_GAM/best_strat1/bn1_best.rda")
-load(file = "output/output_GAM/best_strat1/bt1_best.rda")
-load(file = "output/output_GAM/best_strat1/bu1_best.rda")
-load(file = "output/output_GAM/best_strat1/sb1_best.rda")
-load(file = "output/output_GAM/best_strat1/sn1_best.rda")
-load(file = "output/output_GAM/best_strat1/si1_best.rda")
-load(file = "output/output_GAM/best_strat1/sp1_best.rda")
-load(file = "output/output_GAM/best_strat1/ti1_best.rda")
+lapply(filenames_s1, load, .GlobalEnv)
 
-### Strat1 mod list 
-s1M <- list(bn1_best = bn1_best,
-                bt1_best = bt1_best,
-                bu1_best = bu1_best,
-                sb1_best = sb1_best,
-                sn1_best = sn1_best,
-                si1_best = si1_best,
-                sp1_best = sp1_best,
-                ti1_best = ti1_best)
 
-### Strata2
+rm( filenames_s1 )
 
-load(file = "output/output_GAM/best_strat2/bn_best.rda")
-load(file = "output/output_GAM/best_strat2/bt_best.rda")
-load(file = "output/output_GAM/best_strat2/bu_best.rda")
-load(file = "output/output_GAM/best_strat2/sb_best.rda")
-load(file = "output/output_GAM/best_strat2/sn_best.rda")
-load(file = "output/output_GAM/best_strat2/si_best.rda")
-load(file = "output/output_GAM/best_strat2/sp_best.rda")
-load(file = "output/output_GAM/best_strat2/ti_best.rda")
+### Create list of models
 
-### Strat2 mod list
-s2M <- list(bn_best = bn_best,
-                bt_best = bt_best,
-                bu_best = bu_best,
-                sb_best = sb_best,
-                sn_best = sn_best,
-                si_best = si_best,
-                sp_best = sp_best,
-                ti_best = ti_best)
 
+
+mod_lst_s1 <- list(bn_mod_s1 = list( # Blacknose
+                                       bn_s1_FA_best = bn_s1_FA_best, ## bn s1
+                                       bn_s1_FJ_best = bn_s1_FJ_best,
+                                       bn_s1_MA_best = bn_s1_MA_best,
+                                       bn_s1_MJ_best = bn_s1_MJ_best
+                                       )
+                ,
+                bt_mod_s1 = list(    # Blacktip
+                                       bt_s1_FA_best = bt_s1_FA_best, ## bt s1
+                                       bt_s1_FJ_best = bt_s1_FJ_best,
+                                       bt_s1_MA_best = bt_s1_MA_best,
+                                       bt_s1_MJ_best = bt_s1_MJ_best
+                                       )
+                ,
+                sn_mod_s1 = list(    # Sharpnose
+                                       sn_s1_FA_best = sn_s1_FA_best, ## sn s1
+                                       sn_s1_FJ_best = sn_s1_FJ_best,
+                                       sn_s1_MA_best = sn_s1_MA_best,
+                                       sn_s1_MJ_best = sn_s1_MJ_best
+                                       )
+                )
+
+### Check list
+length(mod_lst_s1);names(mod_lst_s1)
+length(mod_lst_s1[[1]]);names(mod_lst_s1[[1]])
+length(mod_lst_s1[[2]]);names(mod_lst_s1[[2]])
+length(mod_lst_s1[[3]]);names(mod_lst_s1[[3]])
+mod_lst_s1$bn_mod_s1$bn_s1_FA_best
+
+
+rm(bn_s1_FA_best, bn_s1_FJ_best, bn_s1_MA_best, bn_s1_MJ_best
+   ,
+   bt_s1_FA_best, bt_s1_FJ_best, bt_s1_MA_best, bt_s1_MJ_best
+   ,
+   sn_s1_FA_best, sn_s1_FJ_best, sn_s1_MA_best, sn_s1_MJ_best 
+   )
 ```
 
-```{r All Lists of all Models by subset, include = FALSE, eval=FALSE}
-### Just using strat2 and strat1 combined Maturity as filler for all models
 
-s1I <- list(bn1_best = bn1_best,
-                bt1_best = bt1_best,
-                bu1_best = bu1_best,
-                sb1_best = sb1_best,
-                sn1_best = sn1_best,
-                si1_best = si1_best,
-                sp1_best = sp1_best,
-                ti1_best = ti1_best)
+##### **Blacknose**
 
+**Variable Order**
 
+| Depth | Temperature | Turbidity | Dissolved Oxygen | Salinity | Distance to Shore | Year |
+|:-----:|:-----------:|:---------:|:----------------:|:--------:|:-----------------:|:----:|
+|  1    |    2        |    3      |       4          |    5     |         6         |   7  |
 
-s2I<- list(bn_best = bn_best,
-                bt_best = bt_best,
-                bu_best = bu_best,
-                sb_best = sb_best,
-                sn_best = sn_best,
-                si_best = si_best,
-                sp_best = sp_best,
-                ti_best = ti_best)
+```{r strat1 Model structures Blacknose Fig2, include = FALSE, eval=FALSE}
+## Blacknose
+    ## Strat 1
+ ## FA
+plot(mod_lst_s1$bn_mod_s1$bn_s1_FA_best, pages = 1, scale = 0)
+bn_row_1 <- c( 1, 0, 0, 4, 5, 0, 6)
+            #  D, T, T, O, S, D, Y
+  ## FJ
+plot(mod_lst_s1$bn_mod_s1$bn_s1_FJ_best, pages = 1, scale = 0)
+bn_row_2 <- c(7, 0, 8, 9, 10, 0, 11)
+            #  D, T, T, O, S, D, Y
+  ## MA
+plot(mod_lst_s1$bn_mod_s1$bn_s1_MA_best, pages = 1, scale = 0)
+bn_row_3 <- c(12, 0, 13, 14, 15, 16, 17)
+            #  D,  T,  T, O, S, D, Y
+  ## MJ
+plot(mod_lst_s1$bn_mod_s1$bn_s1_MJ_best, pages = 1, scale = 0)
+bn_row_4 <- c(0, 18, 19, 20, 0, 21, 22)
+            #  D,  T,  T, O, S, D, Y
 
-rm( bn_best, bt_best, bu_best, sb_best, sn_best, si_best, sp_best, ti_best,
-   bn1_best, bt1_best, bu1_best, sb1_best, sn1_best, si1_best, sp1_best, ti1_best, )
-
+(bn_mat_s1 <- matrix(c(bn_row_1, bn_row_2, bn_row_3, bn_row_4),
+                  nrow = 4, ncol = 7, byrow = TRUE) )
+bn.lay.s1 <- layout( bn_mat_s1 )
+layout.show( bn.lay.s1 )
 ```
 
-```{r Model structures Fig2, include = FALSE, eval=FALSE}
-mod_struc_1 <- list(bn1_best = bn1_best$pred.formula,
-                    bt1_best = bt1_best$pred.formula,
-                    bu1_best = bu1_best$pred.formula,
-                    sb1_best = sb1_best$pred.formula,
-                    sn1_best = sn1_best$pred.formula,
-                    si1_best = si1_best$pred.formula,
-                    sp1_best = sp1_best$pred.formula,
-                    ti1_best = ti1_best$pred.formula)
+
+##### **Blacktip**
+
+**Variable Order**
+
+| Depth | Temperature | Turbidity | Dissolved Oxygen | Salinity | Distance to Shore | Year |
+|:-----:|:-----------:|:---------:|:----------------:|:--------:|:-----------------:|:----:|
+|  1    |    2        |    3      |       4          |    5     |         6         |   7  |
+
+```{r strat1 Blacktip Model structures  Fig2, include = FALSE, eval=FALSE}
+## Blacktip
+    ## Strat 1
+ ## FA
+plot(mod_lst_s1$bt_mod_s1$bt_s1_FA_best, pages = 1)
+bt_row_1 <-  c(0, 1, 0, 2, 0, 3, 4)
+            #  D, T, T, O, S, D, Y
+  ## FJ
+plot(mod_lst_s1$bt_mod_s1$bt_s1_FJ_best, pages = 1)
+bt_row_2 <- c(5, 0, 6, 7, 0, 0, 8)
+            #  D, T, T, O, S, D, Y
+  ## MA
+plot(mod_lst_s1$bt_mod_s1$bt_s1_MA_best, pages = 1)
+bt_row_3 <- c(9, 0, 10, 11, 0, 0, 12)
+            #  D, T, T, O, S, D, Y
+  ## MJ
+plot(mod_lst_s1$bt_mod_s1$bt_s1_MJ_best, pages = 1)
+bt_row_4 <- c(0, 13, 14, 15, 16, 0, 17)
+            #  D, T, T, O, S, D, Y
 
 
-
-
-mod_struc_2 <- list(bn_best = bn_best$pred.formula,
-                    bt_best = bt_best$pred.formula,
-                    bu_best = bu_best$pred.formula,
-                    sb_best = sb_best$pred.formula,
-                    sn_best = sn_best$pred.formula,
-                    si_best = si_best$pred.formula,
-                    sp_best = sp_best$pred.formula,
-                    ti_best = ti_best$pred.formula)
-
-
+(bt_mat_s1 <- matrix(c(bt_row_1, bt_row_2, bt_row_3, bt_row_4),
+                  nrow = 4, ncol = 7, byrow = TRUE) )
+bt.lay.s1 <- layout( bt_mat_s1 )
+layout.show( bt.lay.s1 )
 ```
 
-I will have to make a unique layout for each species. by look ing at the formula of the best fir model I've determined which terms are included and will use this ingormation to create a matrix for *layout()*.
-
-```{r Layouts for Figure 2 , include = FALSE, eval=FALSE}
-### Blacknose
-
-(bn_vec <-c(1:14,
-            0,0,15,16,17,0,18,
-            0,0,19,20,21,0,22))
-
-(bn_mat <- matrix(bn_vec, nrow = 4, ncol = 7, byrow = TRUE))
-
-bn.smooth <- layout(bn_mat)
-
-layout.show(bn.smooth)
-
-### Blacktip
-(bt_vec <- c(0,1,2,3,4,5,6,
-             0,7,8,9,10,11,12,
-             13,0,14,15,16,0,17,
-             18,0,19,20,21,0,22))
-
-(bt_mat <- matrix( bt_vec, nrow = 4, ncol = 7, byrow = TRUE))
-
-bt.smooth <- layout( bt_mat )
-layout.show( bt.smooth )
 
 
-###  Bull
-(bu_vec <- c(1,0,2,3,4,0,5,
-             6,0,7,8,9,0,10,
-             11,0,12,0,0,13,14,
-             15,0,16,0,0,17,18))
+##### **Sharpnose**
 
-(bu_mat <- matrix( bu_vec, nrow = 4, ncol = 7, byrow = TRUE))
+**Variable Order**
 
-bu.smooth <- layout( bu_mat )
-layout.show( bu.smooth )
+| Depth | Temperature | Turbidity | Dissolved Oxygen | Salinity | Distance to Shore | Year |
+|:-----:|:-----------:|:---------:|:----------------:|:--------:|:-----------------:|:----:|
+|  1    |    2        |    3      |       4          |    5     |         6         |   7  |
 
-### sandbar
-(sb_vec <- c(1:28))
+```{r strat1 Sharpnose Model structures Fig2, include = FALSE, eval=FALSE}
+## Sharpnose
+    ## Strat 1
+ ## FA
+plot(mod_lst_s1$sn_mod_s1$sn_s1_FA_best, pages = 1)
+sn_row_1 <- c(1, 0, 2, 3, 0, 0, 4)
+            #  D, T, T, O, S, D, Y
+  ## FJ
+plot(mod_lst_s1$sn_mod_s1$sn_s1_FJ_best, pages = 1)
+sn_row_2 <- c(0, 5, 6, 7, 0, 8, 9)
+            #  D, T, T, O, S, D, Y
+  ## MA
+plot(mod_lst_s1$sn_mod_s1$sn_s1_MA_best, pages = 1)
+sn_row_3 <- c(10, 0, 11, 12, 13, 0, 14)
+            #  D,  T,  T, O, S, D, Y
+  ## MJ
+plot(mod_lst_s1$sn_mod_s1$sn_s1_MJ_best, pages = 1)
+sn_row_4 <- c(0, 15, 16, 0, 0, 0, 17)
+            #  D, T, T, O, S, D, Y
 
-(sb_mat <- matrix( sb_vec, nrow = 4, ncol = 7, byrow = TRUE))
-
-sb.smooth <- layout( sb_mat )
-layout.show( sb.smooth )
-             
-### Sharpnose
-(sn_vec <- c(1:14,
-             15:19,0,20,
-             21:25,0,26))
-
-(sn_mat <- matrix( sn_vec, nrow = 4, ncol = 7, byrow = TRUE))
-
-sn.smooth <- layout( sn_mat )
-layout.show( sn.smooth )
-
-### Silky
-(si_vec <- c(1,0,2,0,0,0,3,
-             4,0,5,0,0,0,6,
-             0,7,8,0,0,0,9,
-             0,10,11,0,0,0,12))
-
-(si_mat <- matrix( si_vec, nrow = 4, ncol = 7, byrow = TRUE))
-
-si.smooth <- layout( si_mat )
-layout.show( si.smooth )
-
-### Spinner
-(sp_vec <- c(1:14,
-             0,15:20,
-             0,21:26))
-
-(sp_mat <- matrix( sp_vec, nrow = 4, ncol = 7, byrow = TRUE))
-
-sp.smooth <- layout( sp_mat )
-layout.show( sp.smooth )
-
-### Tiger
-(ti_vec <- c(1,0,2,3,0,0,4,
-             5,0,6,7,0,0,8,
-             9,10,11,12,0,13,14,
-             15,16,17,18,0,19,20))
-
-(ti_mat <- matrix( ti_vec, nrow = 4, ncol = 7, byrow = TRUE))
-
-ti.smooth <- layout( ti_mat )
-layout.show( ti.smooth )
-    
-
-lay_mat <- list(bn_mat,
-                bt_mat,
-                bu_mat,
-                sb_mat,
-                sn_mat,
-                si_mat,
-                sp_mat,
-                ti_mat)
-    
+(sn_mat_s1 <- matrix(c(sn_row_1, sn_row_2, sn_row_3, sn_row_4),
+                  nrow = 4, ncol = 7, byrow = TRUE) )
+sn.lay.s1 <- layout( sn_mat_s1 )
+layout.show( sn.lay.s1 )
 ```
 
-```{r figure 2 tiff file paths, include = FALSE, eval=FALSE}
-file_name <- numeric(8)
+I will have to make a unique layout for each species. By looking at the formula of the best fit model I've determined which terms are included and will use this information to create a matrix for *layout()*.
 
-for(i in 1:8){
+##### Figure 2 loop **Strat 1**
+
+```{r Layouts for Figure 2 strat 1, include = FALSE, eval=FALSE}
+  # Strat 1
+lay_mat_s1 <- list(bn_mat_s1,
+                   bt_mat_s1,
+                   sn_mat_s1
+                   )
+```
+
+```{r figure 2 strat 1 tiff file paths, include = FALSE, eval=FALSE}
+# Strata 1
+file_name_s1 <- numeric( length(lay_mat_s1) )
+
+letr_s1 <- letters[c(seq(1, 14, by = 2))]
+
+
+for(i in 1:length(file_name_s1) ){
   
-  file_name[i] <- paste0("6_figures\\figures\\Figure_2_",letters[i], ".tiff")
+  file_name_s1[i] <- paste0("6_figures\\figures\\Figure_2_(",letr_s1[i], ").tiff")
 }
 
-file_name
-
+file_name_s1
 ```
 
-```{r  Figure 2 prep, eval=FALSE, include=FALSE}
-
-
+```{r  Figure 2 prep strat 1, include=FALSE, eval=FALSE}
 
 cex_txt <- 1
 cex_lab <- 1.5
@@ -1305,28 +1225,61 @@ letter_line <- -0.75
 letter_at <- 0
 
 sleep_time <- 0.01
+```
+```{r make unique y-lims, include=FALSE, eval=FALSE}
+my_ylim <- list(bn_ylim = list(c(-50,50), ## lat-lon
+                               c(-50,50), ## depth
+                               c(-50,50), ## temp
+                               c(-50,50), ## turb
+                               c(-50,50), ## oxy
+                               c(-50,50), ## sal
+                               c(-50,50), ## dis
+                               c(-50,50)  ## Year
+                               )
+                ,
+                bt_ylim = list(c(-50,50), ## lat-lon
+                               c(-50,50), ## depth
+                               c(-50,50), ## temp
+                               c(-50,50), ## turb
+                               c(-50,50), ## oxy
+                               c(-50,50), ## sal
+                               c(-50,50), ## dis
+                               c(-50,50)  ## Year
+                               )
+                ,
+                sn_ylim = list(c(-50,50), ## lat-lon
+                               c(-50,50), ## depth
+                               c(-50,50), ## temp
+                               c(-50,50), ## turb
+                               c(-50,50), ## oxy
+                               c(-50,50), ## sal
+                               c(-50,50), ## dis
+                               c(-50,50)  ## Year
+                               )
+                ) 
 
 ```
 
-```{r Figure 2 plots Loop, include=FALSE, eval = FALSE}
 
+```{r Figure 2 Strata 1 plots Loop, include=FALSE, eval = FALSE}
+# Strata 1
 
+for(i in 1:length(mod_lst_s1) ){ ## loop through species level of mod_lst_s1
   
-  for(i in 1:8){
-    
-    tiff(filename =  file_name[i], height = 2000, width = 2500, res = 300)
+  tiff(filename =  file_name_s1[i], height = 2000, width = 2500, res = 300)
   
   par(oma = c(1.5, 3.25, 1, 1), # two rows of text at the outer left and bottom margin
     mar = c(1, 1, 1, 1), # space for one row of text at ticks and to separate plots
     mgp = c(1.75, 0.75, 0))
   
-  layout( lay_mat[[i]] ) 
-   
-  ### Strat1 Mature
-  for(j in 2:8){
+  layout( lay_mat_s1[[i]] )
+  
     
+    for(j in 1:length( mod_lst_s1[[i]] ) ){ ### loop through Sex, and Maturity level of mod_lst_s1 
+      
+      for(k in 2:8){ ## Loop through specific variables in each level of sex and maturity for specific species
     
-    plot(s1M[[i]], select = j,
+    plot(mod_lst_s1[[i]][[j]], select = k,
          xlab = "", ylab = "",
          main = "",
          lwd= my_lwd, 
@@ -1334,74 +1287,41 @@ sleep_time <- 0.01
          cex.lab = cex_lab, 
          bty = "n")
     
-    abline( h = 0, col = "blue", lty = 3)
+    abline( h = 0, col = "blue", lty = 3)  
     
-  }
-  ### Strat1 Immature
-    for(j in 2:8){
-    
-    plot(s1I[[i]], select = j,
-          xlab = "", ylab = "",
-         main= "",
-         lwd= my_lwd, 
-         cex.axis = cex_axis, 
-         cex.lab = cex_lab, 
-         bty = "n")
-    
-    abline( h = 0, col = "blue", lty = 3)
+    Sys.sleep(sleep_time)
     
     }
-  ### Strat 2 Mature
-    for(j in 2:8){
-    
-    plot(s2M[[i]], select = j,
-          xlab = "", ylab = "",
-         main= "",
-         lwd= my_lwd, 
-         cex.axis = cex_axis, 
-         cex.lab = cex_lab, 
-         bty = "n")
-    
-    abline( h = 0, col = "blue", lty = 3)
-    
+      
     }
-  ### Strat 2 Immature
-    for(j in 2:8){
+    Sys.sleep(sleep_time)
     
-    plot(s2I[[i]], select = j,
-          xlab = "", ylab = "",
-         main= "",
-         lwd= my_lwd, 
-         cex.axis = cex_axis, 
-         cex.lab = cex_lab, 
-         bty = "n")
     
-    abline( h = 0, col = "blue", lty = 3)
-    
-    }
-### Y labels
-    mtext("Strat 1 Mature",
+  
+  
+  ### Y labels
+    mtext("Female Adult ",
         side = 2, 
         at = 0.875,
         line = y_line,
         cex = cex_txt, 
         outer = TRUE)
   
-    mtext("Strat 1 Immature",
+    mtext("Female Juvenile",
         side = 2,
         at = 0.625,
         line = y_line,
         cex = cex_txt,
         outer = TRUE)
     
-      mtext("Strat 2 Mature",
+      mtext("Male Adult",
         side = 2, 
         at = 0.375,
         line = y_line,
         cex = cex_txt,
         outer = TRUE)
       
-        mtext("Strat 2 Immature",
+        mtext("Male Juvenile",
         side = 2, 
         at = 0.125,
         line = y_line,
@@ -1458,7 +1378,7 @@ sleep_time <- 0.01
         outer = TRUE)
         
          ### Figure letter
-        mtext(paste0("(", letters[i], ")"),
+        mtext(paste0("(", letr_s1[i], ")"),
         side = 3, 
         at = letter_at,
         line = letter_line,
@@ -1470,87 +1390,441 @@ sleep_time <- 0.01
         
         dev.off()
         
-        }
-  
-
-
+}
 
 ```
 
-![**Figure 2 a**](figures\\Figure_2_a.tiff)
-
-![Figure 2 b](figures\\Figure_2_b.tiff)
-
-![Figure 2 c](figures\\Figure_2_c.tiff)
-
-![Figure 2 d](figures\\Figure_2_d.tiff)
-
-![Figure 2 e](figures\\Figure_2_e.tiff)
-
-![Figure 2 f](figures\\Figure_2_f.tiff)
-
-![Figure 2 g](figures\\Figure_2_g.tiff)
-
-![Figure 2 h](figures\\Figure_2_h.tiff)
 
 
 
-### Figure 3 Heat Map showing CPUE by area in nGoM
+#### **Strat 2** Figure 2
+
+```{r Load Best Strat 2 Models, eval = FALSE, include = FALSE}
+filenames_s2 <- list.files(c("output/output_GAM/best/blacknose/strat2",
+                             "output/output_GAM/best/blacktip/strat2",
+                             "output/output_GAM/best/sharpnose/strat2"), pattern="*.rda", full.names=TRUE)
+
+lapply(filenames_s2, load, .GlobalEnv)
+
+rm( filenames_s2 )
+
+
+### Create list of models
+
+mod_lst_s2 <- list(bn_mod_s2 = list( # Blacknose
+                                       bn_s2_FA_best = bn_s2_FA_best, ## bn s2
+                                       bn_s2_FJ_best = bn_s2_FJ_best,
+                                       bn_s2_MA_best = bn_s2_MA_best,
+                                       bn_s2_MJ_best = bn_s2_MJ_best
+                                       )
+                ,
+                bt_mod_s2 = list(    # Blacktip
+                                       bt_s2_FA_best = bt_s2_FA_best, ## bt s2
+                                       bt_s2_FJ_best = bt_s2_FJ_best,
+                                       bt_s2_MA_best = bt_s2_MA_best,
+                                       bt_s2_MJ_best = bt_s2_MJ_best
+                                       )
+                ,
+                sn_mod_s2 = list(    # Sharpnose
+                                       sn_s2_FA_best = sn_s2_FA_best, ## sn s2
+                                       sn_s2_FJ_best = sn_s2_FJ_best,
+                                       sn_s2_MA_best = sn_s2_MA_best,
+                                       sn_s2_MJ_best = sn_s2_MJ_best
+                                       )
+                )
+length(mod_lst_s2);names(mod_lst_s2)
+length(mod_lst_s2[[1]]);names(mod_lst_s2[[1]])
+length(mod_lst_s2[[2]]);names(mod_lst_s2[[2]])
+length(mod_lst_s2[[3]]);names(mod_lst_s2[[3]])
+
+
+rm(bn_s2_FA_best, bn_s2_FJ_best, bn_s2_MA_best, bn_s2_MJ_best
+   ,
+   bt_s2_FA_best, bt_s2_FJ_best, bt_s2_MA_best, bt_s2_MJ_best
+   ,
+   sn_s2_FA_best, sn_s2_FJ_best, sn_s2_MA_best, sn_s2_MJ_best)
+```
+
+
+##### **Blacknose**
+
+**Variable Order**
+
+| Depth | Temperature | Turbidity | Dissolved Oxygen | Salinity | Distance to Shore | Year |
+|:-----:|:-----------:|:---------:|:----------------:|:--------:|:-----------------:|:----:|
+|  1    |    2        |    3      |       4          |    5     |         6         |   7  |
+
+```{r Model structures Blacknose Fig2, include = FALSE, eval=FALSE}
+## Blacknose
+    ## Strat 2
+ ## FA
+plot(mod_lst_s2$bn_mod_s2$bn_s2_FA_best, pages = 1)
+bn_row_5 <- c(0, 0, 1, 0, 0, 0, 2)
+            #  D, T, T, O, S, D, Y
+  ## FJ
+plot(mod_lst_s2$bn_mod_s2$bn_s2_FJ_best, pages = 1)
+bn_row_6 <- c(0, 3, 4, 5, 6, 7, 8)
+            #  D, T, T, O, S, D, Y
+  ## MA
+plot(mod_lst_s2$bn_mod_s2$bn_s2_MA_best, pages = 1)
+bn_row_7 <- c(0, 9, 10, 11, 12, 0, 13)
+            #  D, T, T, O, S, D, Y
+  ## MJ
+plot(mod_lst_s2$bn_mod_s2$bn_s2_MJ_best, pages = 1)
+bn_row_8 <- c(14, 0, 15, 16, 17, 0, 18)
+            #  D, T, T, O, S, D, Y
+
+(bn_mat_s2 <- matrix(c(bn_row_5, bn_row_6, bn_row_7, bn_row_8),
+                  nrow = 4, ncol = 7, byrow = TRUE) )
+
+bn.lay.s2 <- layout( bn_mat_s2 )
+layout.show( bn.lay.s2 )
+```
+
+
+##### **Blacktip**
+
+**Variable Order**
+
+| Depth | Temperature | Turbidity | Dissolved Oxygen | Salinity | Distance to Shore | Year |
+|:-----:|:-----------:|:---------:|:----------------:|:--------:|:-----------------:|:----:|
+|  1    |    2        |    3      |       4          |    5     |         6         |   7  |
+
+```{r Blacktip Model structures  Fig2, include = FALSE, eval=FALSE}
+## Blacktip
+    ## Strat 2
+ ## FA
+plot(mod_lst_s2$bt_mod_s2$bt_s2_FA_best, pages = 1)
+bt_row_5 <- c(0, 0, 1, 0, 2, 0, 3)
+            #  D, T, T, O, S, D, Y
+  ## FJ
+plot(mod_lst_s2$bt_mod_s2$bt_s2_FJ_best, pages = 1)
+bt_row_6 <- c(4, 0, 5, 0, 6, 0, 7)
+            #  D, T, T, O, S, D, Y
+  ## MA
+plot(mod_lst_s2$bt_mod_s2$bt_s2_MA_best, pages = 1)
+bt_row_7 <- c(8, 0, 9, 0, 0, 0, 10)
+            #  D, T, T, O, S, D, Y
+  ## MJ
+plot(mod_lst_s2$bt_mod_s2$bt_s2_MJ_best, pages = 1)
+bt_row_8 <- c(11, 0, 0, 12, 13, 0, 14)
+            #  D, T, T, O, S, D, Y
+
+(bt_mat_s2 <- matrix(c(bt_row_5, bt_row_6, bt_row_7, bt_row_8),
+                  nrow = 4, ncol = 7, byrow = TRUE) )
+
+bt.lay.s2 <- layout( bt_mat_s2 )
+layout.show( bt.lay.s2 )
+```
+
+
+
+##### **Sharpnose**
+
+**Variable Order**
+
+| Depth | Temperature | Turbidity | Dissolved Oxygen | Salinity | Distance to Shore | Year |
+|:-----:|:-----------:|:---------:|:----------------:|:--------:|:-----------------:|:----:|
+|  1    |    2        |    3      |       4          |    5     |         6         |   7  |
+
+```{r Sharpnose Model structures Fig2, include = FALSE, eval=FALSE}
+## Sharpnose
+    ## Strat 2
+ ## FA
+plot(mod_lst_s2$sn_mod_s2$sn_s2_FA_best, pages = 1)
+sn_row_5 <- c(0, 1, 2, 0, 0, 0, 3)
+            #  D, T, T, O, S, D, Y
+  ## FJ
+plot(mod_lst_s2$sn_mod_s2$sn_s2_FJ_best, pages = 1)
+sn_row_6 <- c(0, 4, 5, 0, 0, 0, 6)
+            #  D, T, T, O, S, D, Y
+  ## MA
+plot(mod_lst_s2$sn_mod_s2$sn_s2_MA_best, pages = 1)
+sn_row_7 <- c(7, 0, 0, 8, 9, 10, 11)
+            #  D, T, T, O, S, D, Y
+  ## MJ
+plot(mod_lst_s2$sn_mod_s2$sn_s2_MJ_best, pages = 1)
+sn_row_8 <- c(0, 12, 0, 13, 0, 0, 14)
+            #  D, T, T, O, S, D, Y
+
+(sn_mat_s2 <- matrix(c(sn_row_5, sn_row_6, sn_row_7, sn_row_8),
+                  nrow = 4, ncol = 7, byrow = TRUE) )
+
+sn.lay.s2 <- layout( sn_mat_s2 )
+layout.show( sn.lay.s2 )
+```
+
+##### Figure 2 loop **Strat 2**
+
+```{r Layouts for Figure 2 , include = FALSE, eval=FALSE}
+# strat 2
+
+lay_mat_s2 <- list(bn_mat_s2,
+                   bt_mat_s2,
+                   sn_mat_s2
+                   )
+```
+
+```{r figure 2 tiff file paths, include = FALSE, eval=FALSE}
+# Strata 2
+
+file_name_s2 <- numeric( length(lay_mat_s2) )
+
+letr_s2 <- letters[c(seq(2, 14, by = 2))]
+
+for(i in 1:length(file_name_s2) ){
+  
+  file_name_s2[i] <- paste0("6_figures\\figures\\Figure_2_(",letr_s2[i], ").tiff")
+}
+
+file_name_s2
+```
+
+```{r  Figure 2 prep, eval=FALSE, include=FALSE}
+
+cex_txt <- 1
+cex_lab <- 1.5
+cex_axis <- 1.25
+my_lwd <- 1.75
+y_line <- 1.25
+x_line <- -0.75
+
+letter_line <- -0.75
+letter_at <- 0
+
+sleep_time <- 0.01
+
+```
+
+
+```{r  Figure 2 Strata 2 plots Loop, include=FALSE, eval = FALSE}
+# Strata 2
+for(i in 1:length(mod_lst_s2) ){ ### loop through species level in mod_lst_s2
+  
+  tiff(filename =  file_name_s2[i], height = 2000, width = 2500, res = 300)
+  
+  par(oma = c(1.5, 3.25, 1, 1), # two rows of text at the outer left and bottom margin
+    mar = c(1, 1, 1, 1), # space for one row of text at ticks and to separate plots
+    mgp = c(1.75, 0.75, 0))
+  
+  layout( lay_mat_s2[[i]] )
+  
+for(j in 1:length(mod_lst_s2[[i]])){ ## Loop through Sex and maturity levels for a species
+  
+  for(k in 2:8){ ## loop through explanatory variables in one level of sex and maturity for a species
+    
+    plot(mod_lst_s2[[i]][[j]], select = k,
+         xlab = "", ylab = "",
+         main = "",
+         lwd= my_lwd, 
+         cex.axis = cex_axis, 
+         cex.lab = cex_lab, 
+         bty = "n")
+    
+    abline( h = 0, col = "blue", lty = 3)    
+    
+  }   
+  
+} 
+  
+  
+  ### Y labels
+    mtext("Female Adult ",
+        side = 2, 
+        at = 0.875,
+        line = y_line,
+        cex = cex_txt, 
+        outer = TRUE)
+  
+    mtext("Female Juvenile",
+        side = 2,
+        at = 0.625,
+        line = y_line,
+        cex = cex_txt,
+        outer = TRUE)
+    
+      mtext("Male Adult",
+        side = 2, 
+        at = 0.375,
+        line = y_line,
+        cex = cex_txt,
+        outer = TRUE)
+      
+        mtext("Male Juvenile",
+        side = 2, 
+        at = 0.125,
+        line = y_line,
+        cex = cex_txt,
+        outer = TRUE)
+  ### X Labels
+        mtext("Depth",
+        side = 3, 
+        at = 1/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Temp",
+        side = 3, 
+        at = 3/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Turb",
+        side = 3, 
+        at = 5/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Oxy",
+        side = 3, 
+        at = 1/2,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Sal",
+        side = 3, 
+        at = 9/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+        mtext("Distance",
+        side = 3, 
+        at = 11/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+       
+         mtext("Year",
+        side = 3, 
+        at = 13/14,
+        line = x_line,
+        cex = cex_txt,
+        outer = TRUE)
+        
+         ### Figure letter
+        mtext(paste0("(", letr_s2[i], ")"),
+        side = 3, 
+        at = letter_at,
+        line = letter_line,
+        cex = cex_txt,
+        outer = TRUE) 
+         
+        
+        Sys.sleep(sleep_time)
+        
+        dev.off()
+        
+}
+```
+
+![**Figure 2 a** Blacknose Strat 1](figures\Figure_2_(a).tiff)
+
+![**Figure 2 b** Blacknose  Strat 2](figures\Figure_2_(b).tiff)
+
+
+![**Figure 2 c** Blacktip Strat 1](figures\Figure_2_(c).tiff)
+
+![**Figure 2 d** Blacktip  Strat 2](figures\Figure_2_(d).tiff)
+
+
+![**Figure 2 e** Sharpnose Strat 1](figures\Figure_2_(e).tiff)
+
+![**Figure 2 f** Sharpnose  Strat 2](figures\Figure_2_(f).tiff)
+
+
+
+
+### **Figure 3** Heat Map showing CPUE by area in nGoM
 
 i. maybe show map with presence and abscense of each species aswell 
 ii. either species 4 rows by 2 columns Or consider year to year comparison of each species
 
+```{r Load Data for Figure 3, include=FALSE, eval=FALSE}
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj)
 
-```{r figure 3 model list, include=FALSE, eval=TRUE}
-### Strata1
+eff3$count <- 1
 
-load(file = "output/output_GAM/best_strat1/bn1_best.rda")
-load(file = "output/output_GAM/best_strat1/bt1_best.rda")
-load(file = "output/output_GAM/best_strat1/bu1_best.rda")
-load(file = "output/output_GAM/best_strat1/sb1_best.rda")
-load(file = "output/output_GAM/best_strat1/sn1_best.rda")
-load(file = "output/output_GAM/best_strat1/si1_best.rda")
-load(file = "output/output_GAM/best_strat1/sp1_best.rda")
-load(file = "output/output_GAM/best_strat1/ti1_best.rda")
+str(eff3)
+headtail(eff3)
 
+## Note pres must be numeric for table 1 >> I've been modifying the load_data with fact_vars if FALSE pres is not a factor variable (default is TRUE)
 
+strat1_Adult <- load_data(data = eff3[eff3$maturity == "A",] %>% droplevels(), strata = 1, fact_vars = FALSE)
+strat2_Adult <- load_data(data = eff3[eff3$maturity == "A",] %>% droplevels(), strata = 2, fact_vars = FALSE)
 
-
-s1 <- list(bn1_best = bn1_best,
-           bt1_best = bt1_best,
-           bu1_best = bu1_best,
-           sb1_best = sb1_best,
-           sn1_best = sn1_best,
-           si1_best = si1_best,
-           sp1_best = sp1_best,
-           ti1_best = ti1_best)
-
-### Strata2
-
-load(file = "output/output_GAM/best_strat2/bn_best.rda")
-load(file = "output/output_GAM/best_strat2/bt_best.rda")
-load(file = "output/output_GAM/best_strat2/bu_best.rda")
-load(file = "output/output_GAM/best_strat2/sb_best.rda")
-load(file = "output/output_GAM/best_strat2/sn_best.rda")
-load(file = "output/output_GAM/best_strat2/si_best.rda")
-load(file = "output/output_GAM/best_strat2/sp_best.rda")
-load(file = "output/output_GAM/best_strat2/ti_best.rda")
+strat1_Juvenile <- load_data(data = eff3[eff3$maturity == "J",] %>% droplevels(), strata = 1, fact_vars = FALSE)
+strat2_Juvenile <- load_data(data = eff3[eff3$maturity == "J",] %>% droplevels(), strata = 2, fact_vars = FALSE)
 
 
-s2 <- list(bn_best = bn_best,
-           bt_best = bt_best,
-           bu_best = bu_best,
-           sb_best = sb_best,
-           sn_best = sn_best,
-           si_best = si_best,
-           sp_best = sp_best,
-           ti_best = ti_best)
+Zero_Adult <- load_data(data = eff3[eff3$maturity == "A" & eff3$pres == 0,] %>% droplevels(), strata = 1, fact_vars = TRUE)
+Zero_Juvenile <- load_data(data = eff3[eff3$maturity == "J" & eff3$pres == 0,] %>% droplevels(), strata = 1, fact_vars = TRUE)
 
-rm( bn_best, bt_best, bu_best, sb_best, sn_best, si_best, sp_best, ti_best,
-   bn1_best, bt1_best, bu1_best, sb1_best, sn1_best, si1_best, sp1_best, ti1_best, )
+
+
+s2_orderd <- list(s2_FA = strat2_Adult$Female,
+                  s2_FJ = strat2_Juvenile$Female,
+                  s2_MA = strat2_Adult$Female,
+                  s2_MJ = strat2_Juvenile$Male)
+
+Zero_ordered <- list(Z_FA = Zero_Adult$Female,
+                     Z_FJ = Zero_Juvenile$Female,
+                     Z_MA = Zero_Adult$Male,
+                     Z_MJ = Zero_Juvenile$Male)
 ```
 
-```{r load shape file, include=FALSE, eval=TRUE}
+```{r figure 3 model list, include=FALSE, eval=FALSE}
+## Blacknose
+
+## Blacktip
+
+## Sharpnose
+filenames_sn <- list.files("output/output_GAM/best_strat1/sharpnose", pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_sn ) ){ load( file = filenames_sn[i] ) }
+
+filenames_sn2 <- list.files("output/output_GAM/best_strat2/sharpnose", pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_sn2 ) ){ load( file = filenames_sn2[ i ] ) }
+
+rm( filenames_sn, filenames_sn2 )
+
+
+### Create list of models
+
+mod_lst_s1 <- list( # Sharpnose
+                sn_s1_FA_best = sn_s1_FA_best, ## sn s1
+                sn_s1_FJ_best = sn_s1_FJ_best,
+                sn_s1_MA_best = sn_s1_MA_best,
+                sn_s1_MJ_best = sn_s1_MJ_best)
+
+mod_lst_s2 <- list( # Sharpnose
+                sn_s2_FA_best = sn_s2_FA_best, ## sn s2
+                sn_s2_FJ_best = sn_s2_FJ_best,
+                sn_s2_MA_best = sn_s2_MA_best,
+                sn_s2_MJ_best = sn_s2_MJ_best)
+
+sn_mod_lst_s2 <- list( # Sharpnose
+                sn_s1_FA_best = sn_s1_FA_best, ## sn s1
+                sn_s1_FJ_best = sn_s1_FJ_best,
+                sn_s1_MA_best = sn_s1_MA_best,
+                sn_s1_MJ_best = sn_s1_MJ_best
+                ,
+                sn_s2_FA_best = sn_s2_FA_best, ## sn s2
+                sn_s2_FJ_best = sn_s2_FJ_best,
+                sn_s2_MA_best = sn_s2_MA_best,
+                sn_s2_MJ_best = sn_s2_MJ_best)
+
+
+rm(sn_s1_FA_best, sn_s1_FJ_best, sn_s1_MA_best, sn_s1_MJ_best, 
+   sn_s2_FA_best, sn_s2_FJ_best, sn_s2_MA_best, sn_s2_MJ_best)
+```
+
+```{r load shape file, include=FALSE, eval=FALSE}
 require(maptools)
 require(sp)
 library(rgdal)
@@ -1559,11 +1833,9 @@ library(lubridate)
 
 gulf.shape <- "shape-file\\Shape\\stateshigh.shp"
 gulf.shape <- maptools::readShapePoly(gulf.shape)
-
-
 ```
 
-```{r fig3 prep, include=FALSE, eval=TRUE }
+```{r fig3 prep, include=FALSE, eval=FALSE }
 plot_tag <- letters[1:8]
 
 
@@ -1576,7 +1848,7 @@ x_ticks <- seq(-98, -81)
 y_ticks <- round(seq(24.5, 30.5, length.out = 5),1)
 
 
-cex_pts <- 0.425
+cex_pts <- 0.25  #0.425
 col_pts <- rgb(0.25,0.25,0.25,0.25) ### only for Strata 1
 cex_legend <- 1.25
 
@@ -1587,24 +1859,38 @@ cex_mtxt <- 1
 Lon_line <- 2
 Lat_line <- 2.5
 
+## mtxt top
+top_ln <- 1.15
+top_cex <- 1.25
+
+  # mtxt left
+l_ln <- 4    
+l_cex <- 1.25
 ```
 
-#### Figure 3 Strata 1
+#### Figure 3 Sharpnose
 
 ```{r Figure 3 Strata 1tiff, include=FALSE, eval=FALSE}
-tiff(filename = "6_figures\\figures\\Figure_3_S1.tiff", width = 2000,  height = 2000, res = 300)
+tiff(filename = "6_figures\\figures\\Figure_3_sn.tiff", width = 2000,  height = 2000, res = 300)
 ```
 
-```{r Figure 3 Strata 1 All plots, include=FALSE, eval=TRUE}
-par(mfrow = c(4, 2),     # 4x2 layout
-    oma = c(2.75, 3.5, 0, 0), # two rows of text at the outer left and bottom margin
-    mar = c(0.5, 0.5, 0, 0), # space for one row of text at ticks and to separate plots
-    mgp = c(2, 0.75, 0))    # axis label at 2 rows distance, tick labels at 1 row
+```{r Figure 3 Strata 1 All plots, include=FALSE, eval=FALSE}
 
-for(i in 1:length(s1)){
+  ## Sharpnose
   
-  vis.gam(s1[[i]],
-          view = c("STARTLON", "STARTLAT"),
+  
+par(mfrow = c(4, 2),     # 4x2 layout
+    oma = c(2.75, 6, 2.75, 0), # two rows of text at the outer left and bottom margin
+    mar = c(0.5, 0.5, 0, 0), # space for one row of text at ticks and to separate plots
+    mgp = c(2, 0.75, 0))    # axis label at 2 rows distance, tick labels at 1 row  
+
+layout(matrix(c(1:8), nrow = 4, ncol = 2, byrow = FALSE))
+
+ ### Strata 1
+for(i in 1:length(mod_lst_s1)){
+  
+  vis.gam(mod_lst_s1[[i]],
+          view = c("startlon", "startlat"),
           xlim = my_xlim, ylim = my_ylim,
           xlab = "", ylab = "",
           xaxt = "n", yaxt = "n",
@@ -1614,47 +1900,53 @@ for(i in 1:length(s1)){
           main = "",
           bty = "n", 
           cond = list(YEAR = 2013))
-
-par(new=T)
-
-plot(strat2[[i]]$STARTLON,
-     strat2[[i]]$STARTLAT,
-     xlim = my_xlim, ylim = my_ylim,
-     xlab = "", ylab = "",
-     xaxt = "n", yaxt = "n",
-     pch = 20,
-     bty="n",
-     cex = cex_pts)
-
-par(new=T)
-
-plot(zero[[i]]$STARTLON,
-     zero[[i]]$STARTLAT,
-     xlim = my_xlim, ylim = my_ylim,
-     xlab = "", ylab = "",
-     xaxt = "n", yaxt = "n",
-     pch = 21,
-     bty="n",
-     cex = cex_pts,
-     col = col_pts)
-
-par(new=T)
-
-sp::plot(gulf.shape, add= T,
+  
+  sp::plot(gulf.shape, add= T,
          xlim = my_xlim, ylim = my_ylim,
          xlab = "", ylab = "",
          xaxt = "n", yaxt = "n",
          col = "gray",
          bty="n")
-
-legend("topleft",
-       legend = paste0("(", plot_tag[i], ")"),
-       bty="n",
-       bg = "gray",
-       cex = cex_legend)
-
-if(i == 1 | i == 3 | i == 5){
   
+    par(new = T)
+    
+    plot(s2_orderd[[i]]$sharpnose$startlon,
+         s2_orderd[[i]]$sharpnose$startlat,
+       xlim = my_xlim, ylim = my_ylim,
+       xlab = "", ylab = "",
+       xaxt = "n", yaxt = "n",
+       pch = 20,
+       bty="n",
+       cex = cex_pts)
+    
+    par(new=T)
+    
+    plot(Zero_ordered[[i]]$sharpnose$startlon,
+         Zero_ordered[[i]]$sharpnose$startlat,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         pch = 21,
+         bty="n",
+         cex = cex_pts,
+         col = col_pts)
+    
+    ## x-axis
+    if(i == 4){
+      
+    axis(1,
+     at = x_ticks,
+     lwd = lwd_axis,
+     cex.axis = cex_axis)
+  
+    mtext("Longitude",
+      side = 1,
+      line = Lon_line,
+      cex = cex_mtxt)      
+      
+    }
+    
+    ## Y-axis (all plots)
     axis(2,
      at = y_ticks,
      las = 2,
@@ -1666,75 +1958,14 @@ if(i == 1 | i == 3 | i == 5){
       line = Lat_line,
       cex = cex_mtxt)
   
-
-}
-
-if(i == 7){
-  
-    axis(1,
-     at = x_ticks,
-     lwd = lwd_axis,
-     cex.axis = cex_axis)
-  
-    mtext("Longitude",
-      side = 1,
-      line = Lon_line,
-      cex = cex_mtxt)    
-  
-  axis(2,
-     at = y_ticks,
-     las = 2,
-     lwd = lwd_axis,
-     cex.axis = cex_axis)
-  
-    mtext("Latitude",
-      side = 2,
-      line = Lat_line,
-      cex = cex_mtxt)
-  
-}
-
-if( i == 8){
-  
-  axis(1,
-     at = x_ticks,
-     lwd = lwd_axis,
-     cex.axis = cex_axis)
-  
-    mtext("Longitude",
-      side = 1,
-      line = Lon_line,
-      cex = cex_mtxt)
-
-  
 }
 
 
+### Strata 2
+for(i in 1:length(mod_lst_s2)){
   
-}
-
-#dev.off()
-```
-
-![Figure 3 Strat 1](figures\\Figure_3_S1.tiff)
-
-
-#### Figure 3 Strata 2
-
-```{r Figure 3 Strata 2tiff, include=FALSE, eval=FALSE}
-tiff(filename = "6_figures\\figures\\Figure_3_S2.tiff", width = 2000,  height = 2000, res = 300)
-```
-
-```{r Figure 3 Strata 2 All plots, include=FALSE, eval=TRUE}
-par(mfrow = c(4, 2),     # 4x2 layout
-    oma = c(2.75, 3.5, 0, 0), # two rows of text at the outer left and bottom margin
-    mar = c(0.5, 0.5, 0, 0), # space for one row of text at ticks and to separate plots
-    mgp = c(2, 0.75, 0))    # axis label at 2 rows distance, tick labels at 1 row
-
-for(i in 1:length(s2)){
-  
-  vis.gam(s2[[i]],
-          view = c("STARTLON", "STARTLAT"),
+  vis.gam(mod_lst_s2[[i]],
+          view = c("startlon", "startlat"),
           xlim = my_xlim, ylim = my_ylim,
           xlab = "", ylab = "",
           xaxt = "n", yaxt = "n",
@@ -1744,51 +1975,28 @@ for(i in 1:length(s2)){
           main = "",
           bty = "n", 
           cond = list(YEAR = 2013))
-
-par(new=T)
-
-plot(strat2[[i]]$STARTLON,
-     strat2[[i]]$STARTLAT,
-     xlim = my_xlim, ylim = my_ylim,
-     xlab = "", ylab = "",
-     xaxt = "n", yaxt = "n",
-     pch = 20,
-     bty="n",
-     cex = cex_pts)
-
-par(new=T)
-
-sp::plot(gulf.shape, add= T,
+  
+  sp::plot(gulf.shape, add= T,
          xlim = my_xlim, ylim = my_ylim,
          xlab = "", ylab = "",
          xaxt = "n", yaxt = "n",
          col = "gray",
          bty="n")
-
-legend("topleft",
-       legend = paste0("(", plot_tag[i], ")"),
+  
+    par(new = T)
+    
+    plot(s2_orderd[[i]]$sharpnose$startlon,
+         s2_orderd[[i]]$sharpnose$startlat,
+       xlim = my_xlim, ylim = my_ylim,
+       xlab = "", ylab = "",
+       xaxt = "n", yaxt = "n",
+       pch = 20,
        bty="n",
-       bg = "gray",
-       cex = cex_legend)
-
-if(i == 1 | i == 3 | i == 5){
-  
-    axis(2,
-     at = y_ticks,
-     las = 2,
-     lwd = lwd_axis,
-     cex.axis = cex_axis)
-  
-    mtext("Latitude",
-      side = 2,
-      line = Lat_line,
-      cex = cex_mtxt)
-  
-
-}
-
-if(i == 7){
-  
+       cex = cex_pts)
+    
+    # x-axis
+    if(i == 4){
+      
     axis(1,
      at = x_ticks,
      lwd = lwd_axis,
@@ -1797,58 +2005,64 @@ if(i == 7){
     mtext("Longitude",
       side = 1,
       line = Lon_line,
-      cex = cex_mtxt)    
+      cex = cex_mtxt)      
+      
+    }
   
-  axis(2,
-     at = y_ticks,
-     las = 2,
-     lwd = lwd_axis,
-     cex.axis = cex_axis)
-  
-    mtext("Latitude",
+}
+
+mtext("Presence",
+      side = 3, 
+      at = 1/4,
+      line = top_ln,
+      cex = top_cex,
+      outer = TRUE)
+        
+mtext("Abundance",
+      side = 3, 
+      at = 0.75,
+      line = top_ln,
+      cex = top_cex,
+      outer = TRUE)
+      
+mtext("Female Adult",
       side = 2,
-      line = Lat_line,
-      cex = cex_mtxt)
-  
-}
+      at = 7/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
 
-if( i == 8){
-  
-  axis(1,
-     at = x_ticks,
-     lwd = lwd_axis,
-     cex.axis = cex_axis)
-  
-    mtext("Longitude",
-      side = 1,
-      line = Lon_line,
-      cex = cex_mtxt)
+mtext("Female Juvenile",
+      side = 2,
+      at = 5/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
 
-  
-}
+mtext("Male Adult",
+      side = 2,
+      at = 3/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
 
+mtext("Male Juvenile",
+      side = 2,
+      at = 1/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
 
-  
-}
-
-#dev.off()
+dev.off()
 ```
 
-![Figure 3 Strat 2](figures\\Figure_3_S2.tiff)
+![**Figure 3 a** Blacknose](figures\Figure_3_(a).tiff)
 
 
+![**Figure 3 b** Blacktip](figures\Figure_3_(b).tiff)
 
 
-
-
-
-
-
-
-
-
-
-
+![**Figure 3 c** Sharpnose](figures\Figure_3_(c).tiff)
 
 
 
