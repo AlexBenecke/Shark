@@ -1,0 +1,383 @@
+---
+title: "Blacktip Best GAM Models"
+author: "Alex Benecke"
+date: "August 31, 2018"
+output:   
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 5
+    fig_width: 10
+    fig_height: 10
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load Packages, include=FALSE, eval=TRUE}
+
+### Load Packages
+library(FSA)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(scales)
+library(mgcv)
+library(sciplot)
+library(pipeR)
+
+### Load My Functions
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" # Specify project where data is stored 
+
+source("5_functions/load_data.R")
+```
+
+```{r Load Data, echo=FALSE, include=FALSE, eval=FALSE}
+#### Load Combined Data ####
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj , na.strings = c(NA, ""))
+str(eff3)
+
+#### Load Structured Data ####
+  ## Strata 1
+strat1_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 1)
+strat1_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 1)
+  ## Strata 2
+strat2_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 2)
+strat2_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 2)
+```
+
+
+# Models Fit #
+
+## Strata 1
+
+| Species   | Female Adult | Female Juvenile | Male Adult | Male Juvenile |
+|:---------:|:------------:|:---------------:|:----------:|:-------------:|
+| Blacknose |  OK          |  OK             |  OK        |  OK           |
+| Blacktip  |  OK          |  OK             |  OK        |  OK           |
+| Bull      |  OK          |  OK             |  OK        |  OK           |
+| Sandbar   |  OK          |  OK             |  OK        |  OK           |
+| Sharpnose |  OK          |  OK             |  OK        |  OK           |
+| Spinner   |  OK          |  OK             |  OK        |  OK           |
+| Tiger     |  OK          |  OK             |  OK        |  OK           |
+
+## Strata 2
+
+| Species   | Female Adult | Female Juvenile | Male Adult | Male Juvenile |
+|:---------:|:------------:|:---------------:|:----------:|:-------------:|
+| Blacknose |  OK          |  OK             |  OK        |  OK           |
+| Blacktip  |  OK          |  OK             |  OK        |  OK           |
+| Bull      |  Failed      |  Failed         |  Failed    |  Failed       |
+| Sandbar   |  OK          |  OK             |  Failed    |  OK           |
+| Sharpnose |  OK          |  OK             |  OK        |  OK           |
+| Spinner   |  Failed      |  OK             |  Failed    |  OK           |
+| Tiger     |  Failed      |  OK             |  Failed    |  OK           |
+
+
+The **Primary Species** I will Use are going to be **Blacknose**, **Blacktip**, and **Sharpnose** because they were fit for all levels of sex and maturity in both strata
+
+
+
+
+# Blacktip #
+
+## Strata 1 Occurrence
+
+### **Female Adult** S1
+```{r, eval=TRUE, include=FALSE}
+load(file = "output/output_GAM/strat1/Female/Adult/bt_s1_FA.rda")
+```
+
+```{r}
+bt_s1_FA$results
+```
+
+```{r, eval = TRUE}
+( bt_s1_FA_best <-  bt_s1_FA$model_fits$LatLon_Temp_Turb_Oxy_Sal_Dis )
+
+
+par(mfrow = c(2,2))
+gam.check( bt_s1_FA_best)
+
+
+
+summary( bt_s1_FA_best)
+
+
+plot( bt_s1_FA_best, pages = 1)
+
+#10-10-2018#save( bt_s1_FA_best, file = "output/output_GAM/best/blacktip/bt_s1_FA_best.rda" )
+```
+
+
+```{r}
+rm( bt_s1_FA, bt_s1_FA_best)
+```
+
+
+
+
+### **Female Juvenile** S1
+```{r, eval=TRUE, include=FALSE}
+load(file = "output/output_GAM/strat1/Female/Juvenile/bt_s1_FJ.rda")
+```
+
+```{r}
+bt_s1_FJ$results
+```
+
+```{r, eval = TRUE}
+( bt_s1_FJ_best <-  bt_s1_FJ$model_fits$LatLon_Dep_Temp_Turb_Oxy_Dis )
+
+
+par(mfrow = c(2,2))
+gam.check( bt_s1_FJ_best)
+
+
+
+summary( bt_s1_FJ_best)
+
+
+plot( bt_s1_FJ_best, pages = 1)
+
+
+
+
+#10-10-2018#save( bt_s1_FJ_best, file = "output/output_GAM/best/blacktip/bt_s1_FJ_best.rda" )
+```
+
+```{r}
+rm( bt_s1_FJ, bt_s1_FJ_best)
+```
+
+
+
+
+### **Male Adult** S1
+
+```{r, eval=TRUE, include=FALSE}
+load(file = "output/output_GAM/strat1/Male/Adult/bt_s1_MA.rda")
+```
+
+```{r}
+bt_s1_MA$results
+```
+
+```{r, eval = TRUE}
+( bt_s1_MA_best <-  bt_s1_MA$model_fits$LatLon_Dep_Temp_Turb_Oxy_Dis_Bottype )
+
+
+par(mfrow = c(2,2))
+gam.check( bt_s1_MA_best)
+
+
+
+summary( bt_s1_MA_best)
+
+
+plot( bt_s1_MA_best, pages = 1)
+
+
+#10-10-2018#save( bt_s1_MA_best, file = "output/output_GAM/best/blacktip/bt_s1_MA_best.rda" )
+```
+
+```{r}
+rm( bt_s1_MA, bt_s1_MA_best)
+```
+
+
+
+
+### **Male Juvenile** S1
+
+```{r, eval=TRUE, include=FALSE}
+load(file = "output/output_GAM/strat1/Male/Juvenile/bt_s1_MJ.rda")
+```
+
+```{r}
+bt_s1_MJ$results
+```
+
+```{r, eval = TRUE}
+( bt_s1_MJ_best <-  bt_s1_MJ$model_fits$LatLon_Temp_Turb_Oxy_Sal_Bottype )
+
+
+par(mfrow = c(2,2))
+gam.check( bt_s1_MJ_best)
+
+
+
+summary( bt_s1_MJ_best)
+
+
+plot( bt_s1_MJ_best, pages = 1)
+
+
+#10-10-2018#save( bt_s1_MJ_best, file = "output/output_GAM/best/blacktip/bt_s1_MJ_best.rda" )
+```
+All smooths are zero everywhere. However, **Lat-Lon** looks pretty interesting showing an area with very high probability of occurrence. 
+
+```{r}
+rm( bt_s1_MJ, bt_s1_MJ_best)
+```
+
+  
+  
+## Strata 2 Zero-Truncated Abundance
+
+### **Female Adult** S2
+
+```{r, eval=TRUE, include=FALSE}
+load(file = "output/output_GAM/strat2/Female/Adult/bt_s2_FA.rda")
+```
+
+```{r}
+bt_s2_FA$results
+```
+
+```{r, eval = TRUE}
+( bt_s2_FA_best <-  bt_s2_FA$model_fits$LatLon_Oxy_Sal )
+
+
+par(mfrow = c(2,2))
+gam.check( bt_s2_FA_best)
+
+
+
+summary( bt_s2_FA_best)
+
+
+plot( bt_s2_FA_best, pages = 1)
+
+
+#10-10-2018#save( bt_s2_FA_best, file = "output/output_GAM/best/blacktip/bt_s2_FA_best.rda" )
+```
+
+```{r}
+rm( bt_s2_FA, bt_s2_FA_best)
+```
+
+
+
+
+
+### **Female Juvenile** S2
+
+```{r, eval=TRUE, include=FALSE}
+load(file = "output/output_GAM/strat2/Female/Juvenile/bt_s2_FJ.rda")
+```
+
+
+```{r}
+bt_s2_FJ$results
+```
+
+```{r, eval = TRUE}
+( bt_s2_FJ_best <-  bt_s2_FJ$model_fits$LatLon_Dep_Temp_Turb_Oxy_Sal )
+
+
+par(mfrow = c(2,2))
+gam.check( bt_s2_FJ_best)
+
+
+
+summary( bt_s2_FJ_best)
+
+
+plot( bt_s2_FJ_best, pages = 1)
+
+
+#10-10-2018#save( bt_s2_FJ_best, file = "output/output_GAM/best/blacktip/bt_s2_FJ_best.rda" )
+```
+
+
+```{r}
+rm( bt_s2_FJ, bt_s2_FJ_best )
+```
+
+
+### **Male Adult** S2
+
+```{r, eval=TRUE, include=FALSE}
+load(file = "output/output_GAM/strat2/Male/Adult/bt_s2_MA.rda")
+```
+
+
+```{r}
+bt_s2_MA$results
+```
+
+```{r, eval = TRUE}
+( bt_s2_MA_best <-  bt_s2_MA$model_fits$LatLon_Dep_Sal_Dis )
+
+
+par(mfrow = c(2,2))
+gam.check( bt_s2_MA_best)
+
+
+
+summary( bt_s2_MA_best)
+
+
+plot( bt_s2_MA_best, pages = 1)
+
+
+
+
+#10-10-2018#save( bt_s2_MA_best, file = "output/output_GAM/best/blacktip/bt_s2_MA_best.rda" )
+```
+
+
+```{r}
+rm( bt_s2_MA, bt_s2_MA_best )
+```
+
+
+
+
+### **Male Juvenile** S2
+
+```{r, eval=TRUE, include=FALSE}
+load(file = "output/output_GAM/strat2/Male/Juvenile/bt_s2_MJ.rda")
+```
+
+
+```{r}
+bt_s2_MJ$results
+```
+
+```{r, eval = TRUE}
+( bt_s2_MJ_best <-  bt_s2_MJ$model_fits$LatLon_Dep_Turb_Oxy_Sal )
+
+
+par(mfrow = c(2,2))
+gam.check( bt_s2_MJ_best)
+
+
+
+summary( bt_s2_MJ_best)
+
+
+plot( bt_s2_MJ_best, pages = 1)
+
+
+#10-10-2018#save( bt_s2_MJ_best, file = "output/output_GAM/best/blacktip/bt_s2_MJ_best.rda" )
+```
+
+```{r}
+rm( bt_s2_MJ, bt_s2_MJ_best)
+```
+
+
+
+
+
+
+
+
+

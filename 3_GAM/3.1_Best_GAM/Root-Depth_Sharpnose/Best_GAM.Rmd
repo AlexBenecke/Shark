@@ -1,0 +1,1104 @@
+---
+title: "Best GAM"
+author: "Alex Benecke"
+date: "July 30, 2018"
+output:   
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 5
+    fig_width: 10
+    fig_height: 10
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE)
+```
+
+```{r Load Packages, include=FALSE, eval=TRUE}
+
+### Load Packages
+library(FSA)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(scales)
+library(mgcv)
+library(sciplot)
+
+### Load My Functions
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" # Specify project where data is stored 
+
+source("5_functions/load_data.R")
+```
+
+```{r Load Data, echo=FALSE, include=FALSE, eval=FALSE}
+#### Load Combined Data ####
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj , na.strings = c(NA, ""))
+str(eff3)
+
+#### Load Structured Data ####
+  ## Strata 1
+strat1_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 1)
+strat1_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 1)
+  ## Strata 2
+strat2_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 2)
+strat2_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 2)
+```
+
+
+# Models Fit #
+
+## Strata 1
+
+| Species   | Female Adult | Female Juvenile | Male Adult | Male Juvenile |
+|:---------:|:------------:|:---------------:|:----------:|:-------------:|
+| Blacknose |  OK          |  OK             |  OK        |  OK           |
+| Blacktip  |  OK          |  OK             |  OK        |  OK           |
+| Bull      |  OK          |  OK             |  OK        |  OK           |
+| Sandbar   |  OK          |  OK             |  OK        |  OK           |
+| Sharpnose |  OK          |  OK             |  OK        |  OK           |
+| Spinner   |  OK          |  OK             |  OK        |  OK           |
+| Tiger     |  OK          |  OK             |  OK        |  OK           |
+
+## Strata 2
+
+| Species   | Female Adult | Female Juvenile | Male Adult | Male Juvenile |
+|:---------:|:------------:|:---------------:|:----------:|:-------------:|
+| Blacknose |  OK          |  OK             |  OK        |  OK           |
+| Blacktip  |  OK          |  OK             |  OK        |  OK           |
+| Bull      |  Failed      |  Failed         |  Failed    |  Failed       |
+| Sandbar   |  OK          |  OK             |  Failed    |  OK           |
+| Sharpnose |  OK          |  OK             |  OK        |  OK           |
+| Spinner   |  Failed      |  OK             |  Failed    |  OK           |
+| Tiger     |  Failed      |  OK             |  Failed    |  OK           |
+
+
+The **Primary Species** I will Use are going to be **Blacknose**, **Blacktip**, and **Sharpnose** because they were fit for all levels of sex and maturity in both strata
+
+
+
+# Blacknose #
+
+## Strata 1 Occurrence
+
+### **Female Adult** S1
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat1/Female/Adult/")
+```
+
+
+
+### **Female Juvenile** S1
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat1/Female/Juvenile/")
+```
+
+
+### **Male Adult** S1
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat1/Male/Adult/")
+```
+
+
+### **Male Juvenile** S1
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat1/Male/Juvenile/")
+```
+
+## Strata 2 Zero-Truncated Abundance
+
+### **Female Adult** S2
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat2/Female/Adult/")
+```
+
+
+### **Female Juvenile** S2
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat2/Female/Juvenile/")
+```
+
+
+### **Male Adult** S2
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat2/Male/Adult/")
+```
+
+
+### **Male Juvenile** S2
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat2/Male/Juvenile")
+```
+
+
+
+
+
+
+# Blacktip #
+
+## Strata 1 Occurrence
+
+### **Female Adult** S1
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat1/Female/Adult/")
+```
+
+
+
+### **Female Juvenile** S1
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat1/Female/Juvenile/")
+```
+
+
+### **Male Adult** S1
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat1/Male/Adult/")
+```
+
+
+### **Male Juvenile** S1
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat1/Male/Juvenile/")
+```
+
+## Strata 2 Zero-Truncated Abundance
+
+### **Female Adult** S2
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat2/Female/Adult/")
+```
+
+
+### **Female Juvenile** S2
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat2/Female/Juvenile/")
+```
+
+
+### **Male Adult** S2
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat2/Male/Adult/")
+```
+
+
+### **Male Juvenile** S2
+```{r, eval=FALSE, include=FALSE}
+load(file = "output/output_GAM/strat2/Male/Juvenile")
+```
+
+
+
+
+# Sharpnose #
+
+## Strata 1 Occurrence
+
+### **Female Adult** S1
+```{r, include=FALSE}
+load(file = "output/output_GAM/strat1/Female/Adult/sn_s1_FA.rda")
+```
+
+```{r}
+sn_s1_FA$results
+```
+
+ All three are the same the only difference is the combination of depth and temp. and Dis for the temp model
+ 
+ [row 1] **Lat-Lon_Root-Dep_Temp_Turb_Oxy_Sal_Dis**
+ `r sn_s1_FA$results[1, c(3:7)]`
+ 
+ 
+ [row 20] **Dep not temp >> Lat-Lon_Root-Dep_Turb_Oxy_Sal_Dis**
+ `r sn_s1_FA$results[20, c(3:7)]`
+ 
+ [row 64] **Temp not dep >> Lat-Lon_Temp_Turb_Oxy_Sal**
+ `r sn_s1_FA$results[64, c(3:7)]`
+
+#### Top Model
+
+```{r sn top model row 1}
+(sn_s1_1 <- sn_s1_FA$model_fits$'Lat-Lon_Root-Dep_Temp_Turb_Oxy_Sal_Dis')
+
+summary(sn_s1_1)
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_1)
+
+
+
+plot(sn_s1_1, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_1, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_1, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_1, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_1, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_1, select = 6)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_1, select = 7)
+abline(h = 0, lty = 3, col = "red")
+
+
+```
+
+#### Depth Model
+
+```{r sn top dep only model row 20}
+(sn_s1_dep <- sn_s1_FA$model_fits$'Lat-Lon_Root-Dep_Turb_Oxy_Sal_Dis')
+
+summary(sn_s1_dep)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_dep)
+
+
+plot(sn_s1_dep, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_dep, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_dep, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_dep, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_dep, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_dep, select = 6)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_dep, select = 7)
+abline(h = 0, lty = 3, col = "red")
+```
+
+#### Temp Model
+
+```{r sn top temp only model row 64}
+(sn_s1_temp <- sn_s1_FA$model_fits$'Lat-Lon_Temp_Turb_Oxy_Sal')
+
+summary(sn_s1_temp)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_temp)
+
+
+plot(sn_s1_temp, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_temp, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_temp, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_temp, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_temp, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+```
+
+#### Top Model without Root-Depth
+
+```{r}
+(sn_s1_1B <- sn_s1_FA$model_fits$'Lat-Lon_Temp_Turb_Oxy_Sal_Dis')
+
+
+summary(sn_s1_1B)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_1B)
+
+
+plot(sn_s1_1B, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_1B, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_1B, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_1B, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_1B, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_1B, select = 6)
+abline(h = 0, lty = 3, col = "red")
+```
+
+#### Selecting best model sn_s1_FA
+
+```{r sn s1 FA Compare models}
+summary(sn_s1_1) ## 50%
+summary(sn_s1_dep) ## 47.2%
+summary(sn_s1_temp) ## 45.6$
+summary(sn_s1_1B) ## 45.6%
+
+anova.gam(sn_s1_1, sn_s1_dep, sn_s1_temp, sn_s1_1B, test = "Chisq")
+
+AIC(sn_s1_1, sn_s1_dep, sn_s1_temp, sn_s1_1B)
+
+```
+
+
+  The results all say that the *row 1* model (*Lat-Lon_Root-Dep_Temp_Turb_Oxy_Sal_Dis*) is the best followed by that the model with just *Root-Depth* (*Lat-Lon_Root-Dep_Turb_Oxy_Sal_Dis*) and then the model with just *Temp* (*Lat-Lon_Temp_Turb_Oxy_Sal*) and no *Distance to shore* variable.
+  
+ I must choose the *Root-Dep* Model as the best model since it has the lowest AIC (beside the top model which I can't use).
+```{r}
+sn_s1_FA_best <- sn_s1_FA$model_fits$'Lat-Lon_Root-Dep_Turb_Oxy_Sal_Dis'
+sn_s1_FA_best
+
+#8-29-2018#save(sn_s1_FA_best, file = "output/output_GAM/best_strat1/sharpnose/sn_s1_FA_best.rda")
+```
+```{r Remove sn_s1_FA Models when kniting}
+rm(sn_s1_FA, sn_s1_1, sn_s1_dep, sn_s1_temp, sn_s1_1B)
+```
+
+
+### **Female Juvenile** S1
+```{r, include=FALSE}
+load(file = "output/output_GAM/strat1/Female/Juvenile/sn_s1_FJ.rda")
+```
+
+```{r}
+sn_s1_FJ$results
+```
+
+Top model according to AIC contains both *Root-Dep* and *Temp*.
+
+[row 1] **Lat-Lon, Root-Dep, Temp, Turb, Oxy, Bottyp**
+`r sn_s1_FJ$results[1, c(3:7)]`
+
+*Temp* only Model
+[row 12] **Lat-Lon, Temp, Turb, Oxy, Dis, Bottyp**
+`r sn_s1_FJ$results[12, c(3:7)]`
+
+*Root-Dep* only Model
+[row 27] **Lat-Lon, Root-Dep, Turb, Oxy, Bottyp**
+`r sn_s1_FJ$results[27, c(3:7)]`
+
+#### Top Model
+
+```{r sn_s1_FJ mod1}
+(sn_s1_FJ_1 <- sn_s1_FJ$model_fits$`Lat-Lon_Root-Dep_Temp_Turb_Oxy_Bottyp`)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_FJ_1)
+
+
+plot(sn_s1_FJ_1, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_FJ_1, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_1, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_1, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_1, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+```
+
+Very Flat Smooths **Everything is Zero** through it's Entire Range. edf not overly large for any term explanatory variables all less than 5 and Lat-Lon edf less than 30.
+
+#### Temp Model
+
+```{r sn_s1_FJ Temp mod}
+(sn_s1_FJ_Temp <- sn_s1_FJ$model_fits$`Lat-Lon_Temp_Turb_Oxy_Dis_Bottyp`)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_FJ_Temp)
+
+
+plot(sn_s1_FJ_Temp, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_FJ_Temp, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_Temp, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_Temp, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_Temp, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+```
+
+The only term that is not zero through it's entire range here is *Temp*. edf looks fairly low for all terms but not too close to k`.
+
+#### Depth Model
+
+```{r sn_s1_FJ Depth mod}
+(sn_s1_FJ_Dep <- sn_s1_FJ$model_fits$`Lat-Lon_Root-Dep_Turb_Oxy_Bottyp`)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_FJ_Dep)
+
+
+plot(sn_s1_FJ_Dep, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_FJ_Dep, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_Dep, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_Dep, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_Dep, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+```
+
+*Oxybotm* edf = 1. Very flat smooths Everything is zero through it's entire range **Except** *Root-Dep*.
+
+#### Other Top Models (delta AIC < 4)
+
+The Top 4 Models all have delta AIC less than 4. Lets look at a few of these.
+
+```{r sn_s1_FJ mod2}
+(sn_s1_FJ_2 <- sn_s1_FJ$model_fits$`Lat-Lon_Root-Dep_Temp_Turb_Oxy_Dis_Bottyp`)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_FJ_2)
+
+
+plot(sn_s1_FJ_2, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_FJ_2, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_2, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_2, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_2, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_2, select = 6)
+abline(h = 0, lty = 3, col = "red")
+
+```
+*Dis.to.SHORE* edf = 1, All other edf's are fairly low but not close to k`. All smooths are essentially Zero.
+
+
+```{r sn_s1_FJ mod3}
+(sn_s1_FJ_3 <- sn_s1_FJ$model_fits$`Lat-Lon_Root-Dep_Temp_Turb_Oxy_Sal_Bottyp`)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_FJ_3)
+
+
+plot(sn_s1_FJ_3, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_FJ_3, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_3, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_3, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_3, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_3, select = 6)
+abline(h = 0, lty = 3, col = "red")
+
+```
+*Salbotm* edf = 1. Smooths are very flat and essentially zero. 
+
+
+```{r sn_s1_FJ mod4}
+(sn_s1_FJ_4 <- sn_s1_FJ$model_fits$`Lat-Lon_Root-Dep_Temp_Turb_Oxy_Sal_Dis_Bottyp`)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_FJ_4)
+
+
+plot(sn_s1_FJ_4, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_FJ_4, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_4, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_4, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_4, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_4, select = 6)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_FJ_4, select = 7)
+abline(h = 0, lty = 3, col = "red")
+
+```
+*Dis.to.Shore* and *salbotm* edf = 1. All smooths very flat and essentially zero.
+
+#### Choosing Best Model sn_s1_FJ
+```{r}
+summary(sn_s1_FJ_1)
+summary(sn_s1_FJ_Temp)
+summary(sn_s1_FJ_Dep)
+
+###
+summary(sn_s1_FJ$model_fits$`Lat-Lon_Temp_Turb_Oxy_Bottyp`) # Top mod no dep #
+summary(sn_s1_FJ$model_fits$`Lat-Lon_Root-Dep_Turb_Oxy_Bottyp`) # Top mod no Temp #
+
+anova.gam(sn_s1_FJ_1, sn_s1_FJ_Temp, sn_s1_FJ_Dep, test = "Chisq")
+
+
+
+```
+
+The best model I can see is the *Temp* Model **Lat-Lon_Temp_Turb_Oxy_Bottyp**
+
+```{r}
+sn_s1_FJ_best <- sn_s1_FJ$model_fits$'Lat-Lon_Temp_Turb_Oxy_Bottyp'
+sn_s1_FJ_best
+
+#8-29-2018#save(sn_s1_FJ_best, file = "output/output_GAM/best_strat1/sharpnose/sn_s1_FJ_best.rda")
+```
+
+### **Male Adult** S1
+```{r, include=FALSE}
+load(file = "output/output_GAM/strat1/Male/Adult/sn_s1_MA.rda")
+```
+
+```{r}
+sn_s1_MA$results
+```
+
+ 
+ [row 1] **Lat-Lon_Root-Dep_Temp_Turb**
+ `r sn_s1_MA$results[1, c(3:7)]`
+ 
+ [row 17] **Dep not temp >> Lat-Lon_Root-Dep_Turb_Oxy_Sal_Dis**
+ `r sn_s1_MA$results[17, c(3:7)]`
+ 
+ [row 35] **Temp not dep >> Lat-Lon_Temp_Turb_Dis_Bottyp**
+ `r sn_s1_MA$results[35, c(3:7)]`
+ 
+#### Top Model 
+ 
+```{r sn_s1_MA Model 1}
+(sn_s1_MA_1 <- sn_s1_MA$model_fits$'Lat-Lon_Root-Dep_Temp_Turb')
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_MA_1)
+
+
+plot(sn_s1_MA_1, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_MA_1, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MA_1, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MA_1, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+
+```
+This model looks pretty good. Except it includes both *temp* and *Depth*
+
+#### Depth Model
+
+```{r sn_s1_MA Depth Model}
+(sn_s1_MA_dep <- sn_s1_MA$model_fits$'Lat-Lon_Root-Dep_Turb_Oxy_Sal_Dis')
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_MA_dep)
+
+
+plot(sn_s1_MA_dep, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_MA_dep, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MA_dep, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MA_dep, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MA_dep, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MA_dep, select = 6)
+abline(h = 0, lty = 3, col = "red")
+
+```
+*Dis.to.SHORE* edf = 1, *Oxybotm* edf near 1 (1.19).
+
+*Oxybotm*, *salbotm*, and *Dis.to.SHORE* are Zero everywhere
+
+#### Temp Model
+
+
+```{r sn_s1_MA Temp Model}
+(sn_s1_MA_temp <- sn_s1_MA$model_fits$'Lat-Lon_Temp_Turb_Dis_Bottyp')
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_MA_temp)
+
+
+plot(sn_s1_MA_temp, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_MA_temp, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MA_temp, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MA_temp, select = 4)
+abline(h = 0, lty = 3, col = "red")
+```
+
+The *Temp* model looks pretty good. 
+
+*Dis.to.SHORE* is Zero Everywhere.
+
+#### Choosinf best Model sn_s1_MA
+
+```{r Compare sn_s1_MA Models}
+summary(sn_s1_MA_1)
+summary(sn_s1_MA_dep)
+summary(sn_s1_MA_temp)
+
+# Anova Fails data sets are not the same size
+#anova.gam(sn_s1_MA_1, sn_s1_MA_dep, sn_s1_MA_temp, test = "Chisq")
+
+AIC(sn_s1_MA_1, sn_s1_MA_dep, sn_s1_MA_temp)
+
+```
+
+The best model here seems to be the *depth* model **Lat-Lon_Root-Dep_Turb_Oxy_Sal_Dis**  
+
+```{r sn_s1_MA Best Model}
+(sn_s1_MA_best <- sn_s1_MA$model_fits$'Lat-Lon_Root-Dep_Turb_Oxy_Sal_Dis')
+
+
+#8-29-2018#save(sn_s1_MA_best, file = "output/output_GAM/best_strat1/sharpnose/sn_s1_MA_best.rda")
+```
+```{r Remove sn_s1_MA Models when kniting}
+rm(sn_s1_MA, sn_s1_MA_1, sn_s1_MA_dep, sn_s1_MA_temp)
+```
+
+
+### **Male Juvenile** S1
+```{r, include=FALSE}
+load(file = "output/output_GAM/strat1/Male/Juvenile/sn_s1_MJ.rda")
+```
+
+```{r}
+sn_s1_MJ$results
+```
+
+Top 10 Models delta AIC less than 4.
+
+ [row 1] **Lat-Lon_Root-Dep_Temp_Turb_Oxy_Sal_Bottyp**
+ `r sn_s1_MJ$results[1, c(3:7)]`
+ 
+  [row 16] **Temp not dep >> Lat-Lon_Temp_Turb_Oxy**
+ `r sn_s1_MJ$results[16, c(3:7)]`
+ 
+ [row 33] **Dep not temp >> Lat-Lon_Root-Dep_Turb_Oxy_Sal_Dis_Bottyp**
+ `r sn_s1_MJ$results[33, c(3:7)]`
+ 
+
+
+#### Top Model
+```{r}
+(sn_s1_MJ_1 <- sn_s1_MJ$model_fits$`Lat-Lon_Root-Dep_Temp_Turb_Oxy_Sal_Bottyp`)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_MJ_1)
+
+
+plot(sn_s1_MJ_1, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_MJ_1, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_1, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_1, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_1, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_1, select = 6)
+abline(h = 0, lty = 3, col = "red")
+
+
+
+```
+*salbotm*edf = 1. *turbbotm* edf near 1 (1.15). All smooths very flat and essentially zero.
+
+#### Temp Model
+```{r}
+(sn_s1_MJ_temp <- sn_s1_MJ$model_fits$`Lat-Lon_Temp_Turb_Oxy`)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_MJ_temp)
+
+
+plot(sn_s1_MJ_temp, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_MJ_temp, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_temp, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_temp, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+```
+*oxybotm* edf = 1. With the exception of *tempbotm* all smooths are essentially 0.
+
+
+#### Top Mod with no *Root-Depth* **sn_s1_MJ$model_fits$`Lat-Lon_Temp_Turb_Oxy_Sal_Bottyp`**
+
+```{r}
+(sn_s1_MJ_temp2 <- sn_s1_MJ$model_fits$`Lat-Lon_Temp_Turb_Oxy_Sal_Bottyp`)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_MJ_temp2)
+
+
+plot(sn_s1_MJ_temp2, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_MJ_temp2, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_temp2, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_temp2, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_temp2, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+```
+
+
+#### Depth Model
+```{r}
+(sn_s1_MJ_dep <- sn_s1_MJ$model_fits$`Lat-Lon_Root-Dep_Turb_Oxy_Sal_Dis_Bottyp`)
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s1_MJ_dep)
+
+
+plot(sn_s1_MJ_dep, pages = 1)
+
+par(mfrow = c(1,1))
+
+plot(sn_s1_MJ_dep, select = 2)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_dep, select = 3)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_dep, select = 4)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_dep, select = 5)
+abline(h = 0, lty = 3, col = "red")
+
+plot(sn_s1_MJ_dep, select = 6)
+abline(h = 0, lty = 3, col = "red")
+
+```
+*oxybotm*, *salbotm*, *Dis.to.SHORE* edf = 1. All Smooths essentially zero.
+
+
+#### Choosing Best Model
+
+
+```{r}
+summary(sn_s1_MJ_1)
+summary(sn_s1_MJ_temp)
+summary(sn_s1_MJ_dep)
+
+###
+summary(sn_s1_MJ$model_fits$`Lat-Lon_Temp_Turb_Oxy_Sal_Bottyp`) # Top mod no dep # This may be a bit better than temp higher dev explained, rsq BUT UBRE is Higher
+summary(sn_s1_MJ$model_fits$`Lat-Lon_Root-Dep_Turb_Oxy_Sal_Bottyp`) # Top mod no Temp # Not as good
+
+anova.gam(sn_s1_FJ_1, sn_s1_FJ_Temp, sn_s1_MJ_temp2, sn_s1_FJ_Dep, test = "Chisq")
+anova.gam(sn_s1_FJ_1, sn_s1_FJ_Temp, sn_s1_FJ_Dep, test = "Chisq")
+
+AIC(sn_s1_FJ_1, sn_s1_FJ_Temp, sn_s1_MJ_temp2, sn_s1_FJ_Dep) ### this is strange AIC given here is different than the AIC in the results table
+
+```
+
+The Best Model is the *Temp2* Model **Lat-Lon_Temp_Turb_Oxy_Sal_Bottyp**. 
+
+
+```{r}
+sn_s1_MJ_best <- sn_s1_MJ$model_fits$'Lat-Lon_Temp_Turb_Oxy_Sal_Bottyp'
+sn_s1_MJ_best
+
+#8-29-2018#save(sn_s1_MJ_best, file = "output/output_GAM/best_strat1/sharpnose/sn_s1_MJ_best.rda")
+```
+
+
+
+## Strata 2 Zero-Truncated Abundance
+
+### **Female Adult** S2
+```{r, include=FALSE}
+load(file = "output/output_GAM/strat2/Female/Adult/sn_s2_FA.rda")
+```
+
+```{r}
+sn_s2_FA$results
+```
+
+Top 9 models delta AIC < 4
+
+
+Top model **Lat-Lon_Root-Dep_Temp_Turb** [row 1]
+
+**Temp** Model **Lat-Lon_Temp_Turb_Sal_Dis** [row 17]
+
+**Depth** Model **Lat-Lon_Root-Dep_Turb_Sal** [row 33]
+
+#### Top Model
+```{r}
+(sn_s2_FA_1 <- sn_s2_FA$model_fits$`Lat-Lon_Root-Dep_Temp_Turb`)
+
+par(mfrow = c(2,2))
+gam.check(sn_s2_FA_1)
+
+
+plot(sn_s2_FA_1, pages = 1)
+
+```
+
+
+#### Temp Model
+
+```{r}
+(sn_s2_FA_temp <- sn_s2_FA$model_fits$`Lat-Lon_Temp_Turb_Sal_Dis`)
+
+par(mfrow = c(2,2))
+gam.check(sn_s2_FA_temp)
+
+
+plot(sn_s2_FA_temp, pages = 1)
+
+```
+*Dis.to.SHORE* edf = 1.
+
+#### Choosing Best Model sn_s2_FA
+
+```{r}
+summary(sn_s2_FA_1)
+summary(sn_s2_FA_temp)
+
+anova.gam(sn_s2_FA_1, sn_s2_FA_temp, test = "Chisq")
+
+AIC(sn_s2_FA_1, sn_s2_FA_temp)
+
+
+```
+
+```{r}
+sn_s2_FA_best <- sn_s2_FA$model_fits$`Lat-Lon_Temp_Turb_Sal_Dis`
+sn_s2_FA_best
+
+
+#8-29-2018#save(sn_s2_FA_best, file = "output/output_GAM/best_strat2/sharpnose/sn_s2_FA_best.rda")
+```
+
+
+
+### **Female Juvenile** S2
+```{r, include=FALSE}
+load(file = "output/output_GAM/strat2/Female/Juvenile/sn_s2_FJ.rda")
+```
+
+```{r}
+sn_s2_FJ$results
+```
+
+delta AIC < 4 for top 7 models
+
+**Top Model** is **Lat-Lon_Temp_Turb_Dis_Bottyp**
+This is also the **Temp Model**
+I'll just go with the top model as the best in this case
+
+```{r}
+sn_s2_FJ_best <- sn_s2_FJ$model_fits$`Lat-Lon_Temp_Turb_Dis_Bottyp`
+sn_s2_FJ_best
+
+par(mfrow = c( 2,2))
+gam.check(sn_s2_FJ_best)
+
+plot(sn_s2_FJ_best, pages = 1)
+
+
+#8-29-2018#save(sn_s2_FJ_best, file = "output/output_GAM/best_strat2/sharpnose/sn_s2_FJ_best.rda")
+```
+*Dis.to.SHORE* edf = 1. Turbbotm very wiggly.
+
+
+
+
+### **Male Adult** S2
+```{r, include=FALSE}
+load(file = "output/output_GAM/strat2/Male/Adult/sn_s2_MA.rda")
+```
+
+```{r}
+sn_s2_MA$results
+```
+
+**Top Model** is **Depth** Model **
+
+```{r}
+(sn_s2_MA_best <- sn_s2_MA$model_fits$'Lat-Lon_Root-Dep_Turb_Oxy_Sal_Bottyp')
+
+par(mfrow = c(2,2))
+gam.check(sn_s2_MA_best)
+
+summary(sn_s2_MA_best)
+
+#8-29-2018#save(sn_s2_MA_best, file = "output/output_GAM/best_strat2/sharpnose/sn_s2_MA_best.rda")
+```
+
+
+
+### **Male Juvenile** S2
+```{r, include=FALSE}
+load(file = "output/output_GAM/strat2/Male/Juvenile/sn_s2_MJ.rda")
+```
+
+```{r}
+sn_s2_MJ$results
+```
+
+```{r}
+(sn_s2_MJ_best <- sn_s2_MJ$model_fits$'Lat-Lon_Temp_Turb_Oxy_Sal')
+
+
+par(mfrow = c(2,2))
+gam.check(sn_s2_MJ_best)
+
+summary(sn_s2_MJ_best)
+
+#8-29-2018#save(sn_s2_MJ_best, file = "output/output_GAM/best_strat2/sharpnose/sn_s2_MJ_best.rda")
+
+```
+*Year* edf is essentially zero.
+
+
+
+
+
+
+
+# Sandbar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
