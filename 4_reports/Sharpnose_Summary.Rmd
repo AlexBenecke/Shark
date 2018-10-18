@@ -1,0 +1,504 @@
+---
+title: "Sharpnose Summary"
+author: "Alex Benecke"
+date: "September 7, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load Packages, eval=TRUE, include=FALSE}
+### Load Packages
+library(FSA)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(scales)
+library(mgcv)
+library(sciplot)
+library(knitr)
+library(kableExtra)
+library(pipeR)
+
+#source("plot_centered_mean.R")
+
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" # Specify project where data is stored 
+
+source("5_functions/model_selection_fn.R")
+
+source("5_functions/load_data.R")
+```
+
+```{r Load Data, eval=TRUE, echo=FALSE, include=FALSE}
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj)
+
+eff3$count <- 1
+
+str(eff3)
+headtail(eff3)
+
+## Note pres must be numeric for table 1 >> I've been modifying the load_data with fact_vars if FALSE pres is not a factor variable (default is TRUE)
+
+strat1_Adult <- load_data(data = eff3[eff3$maturity == "A",] %>% droplevels(), strata = 1, fact_vars = FALSE)
+strat2_Adult <- load_data(data = eff3[eff3$maturity == "A",] %>% droplevels(), strata = 2, fact_vars = FALSE)
+
+strat1_Juvenile <- load_data(data = eff3[eff3$maturity == "J",] %>% droplevels(), strata = 1, fact_vars = FALSE)
+strat2_Juvenile <- load_data(data = eff3[eff3$maturity == "J",] %>% droplevels(), strata = 2, fact_vars = FALSE)
+
+rm( eff3 )
+```
+
+```{r Load Sharpnose models for table 3, eval=TRUE, include=FALSE}
+## Sharpnose
+filenames_sn <- list.files(c("output/output_GAM/best/sharpnose/strat1",
+                             "output/output_GAM/best/sharpnose/strat2"), pattern="*.rda", full.names=TRUE)
+
+for( i in 1:length( filenames_sn ) ){ 
+  
+  load( file = filenames_sn[ i ] ) 
+  
+  }
+
+rm( filenames_sn, i )
+
+
+mod_lst <- list(sn_s1_FA_best = sn_s1_FA_best, ## sn s1
+                sn_s1_FJ_best = sn_s1_FJ_best,
+                sn_s1_MA_best = sn_s1_MA_best,
+                sn_s1_MJ_best = sn_s1_MJ_best,
+                sn_s2_FA_best = sn_s2_FA_best, ## sn s2
+                sn_s2_FJ_best = sn_s2_FJ_best,
+                sn_s2_MA_best = sn_s2_MA_best,
+                sn_s2_MJ_best = sn_s2_MJ_best)
+
+rm(sn_s1_FA_best, sn_s1_FJ_best, sn_s1_MA_best, sn_s1_MJ_best, 
+   sn_s2_FA_best, sn_s2_FJ_best, sn_s2_MA_best, sn_s2_MJ_best)
+```
+
+
+  I will be reviewing the best fit models for Sharpnose Sharks in order to collect my thoughts for the results section of the manuscript.
+
+
+# Strata 1 **Probability of Occurrence**
+
+## Female Adult s1
+
+```{r}
+s1_FA <- mod_lst$sn_s1_FA_best
+
+s1_FA
+summary(s1_FA)
+
+plot(s1_FA, pages = 1, 
+     scale = 0,
+     all.terms = TRUE)
+
+par(mfrow = c(1,1))
+
+plot(s1_FA,
+     select =  1,
+     #scheme = 1,
+     scale = 0)
+
+plot(s1_FA,
+     select =  2,
+     scale = 0,
+     shade = TRUE)
+
+plot(s1_FA,
+     select =  3,
+     scale = 0,
+     shade = TRUE)
+
+plot.gam(s1_FA,
+         select = 4,
+         scale = 0,
+         shade = TRUE)
+
+
+vis.gam(s1_FA, theta = 30, ticktype = "detailed", type = "response")
+
+vis.gam(s1_FA, theta = 45, ticktype = "detailed", se = 2)
+
+vis.gam(s1_FA, plot.type="contour")
+
+```
+
+
+```{r}
+pv <- predict(s1_FA, type = "response")
+
+head(pv)
+str(pv)
+   
+
+Xp <- predict(s1_FA, type = "lpmatrix")
+
+str(Xp)
+dim(Xp)
+
+fv <- Xp%*%coef(s1_FA)
+
+str(fv)
+head(fv)
+
+fv
+```
+
+
+## Female Juvenile s1
+```{r}
+s1_FJ <- mod_lst$sn_s1_FJ_best
+
+summary(s1_FJ)
+
+```
+
+
+## Male Adult s1
+```{r}
+s1_MA <- mod_lst$sn_s1_MA_best
+
+summary(s1_MA)
+```
+
+
+## Male Juvenile s1
+```{r}
+s1_MJ <- mod_lst$sn_s1_MJ_best
+
+summary(s1_MJ)
+```
+
+
+# Strata 2 **Abundance**
+
+## Female Adult s2
+```{r}
+s2_FA <- mod_lst$sn_s2_FA_best
+
+summary(s2_FA)
+
+plot(s1_FA,
+     pages =  1,
+     scale = 0)
+
+```
+
+## Female Juvenile s2
+```{r}
+s2_FJ <- mod_lst$sn_s2_FJ_best
+
+summary(s2_FJ)
+
+```
+
+
+## Male Adult s2
+```{r}
+s2_MA <- mod_lst$sn_s2_MA_best
+
+summary(s2_MA)
+```
+
+
+## Male Juvenile s2
+```{r}
+s2_MJ <- mod_lst$sn_s2_MJ_best
+
+summary(s2_MJ)
+
+```
+
+### Heatmap
+```{r load shape file, include=FALSE, eval=FALSE}
+require(maptools)
+require(sp)
+library(rgdal)
+library(lubridate)
+
+
+gulf.shape <- "shape-file\\Shape\\stateshigh.shp"
+gulf.shape <- maptools::readShapePoly(gulf.shape)
+```
+
+```{r fig3 prep, include=FALSE, eval=FALSE }
+plot_tag <- letters[1:8]
+
+
+my_xlim <- c(-97.5, -81)
+
+my_ylim <- c(24.5,30.5)
+
+x_ticks <- seq(-98, -81)
+#-80.75, -81.25
+y_ticks <- round(seq(24.5, 30.5, length.out = 5),1)
+
+
+cex_pts <- 0.25  #0.425
+col_pts <- rgb(0.25,0.25,0.25,0.25) ### only for Strata 1
+cex_legend <- 1.25
+
+lwd_axis <- 1
+cex_axis <- 1
+cex_mtxt <- 1
+
+Lon_line <- 2
+Lat_line <- 2.5
+
+## mtxt top
+top_ln <- 1.15
+top_cex <- 1.25
+
+  # mtxt left
+l_ln <- 4    
+l_cex <- 1.25
+```
+
+```{r Figure 3 Strata 1 All plots, include=FALSE, eval=FALSE}
+
+  ## Sharpnose
+  
+  
+par(mfrow = c(4, 2),     # 4x2 layout
+    oma = c(2.75, 6, 2.75, 0), # two rows of text at the outer left and bottom margin
+    mar = c(0.5, 0.5, 0, 0), # space for one row of text at ticks and to separate plots
+    mgp = c(2, 0.75, 0))    # axis label at 2 rows distance, tick labels at 1 row  
+
+layout(matrix(c(1:8), nrow = 4, ncol = 2, byrow = FALSE))
+
+ ### Strata 1
+for(i in 1:length(mod_lst)){
+  
+  vis.gam(mod_lst[[i]],
+          view = c("startlon", "startlat"),
+          xlim = my_xlim, ylim = my_ylim,
+          xlab = "", ylab = "",
+          xaxt = "n", yaxt = "n",
+          plot.type = "contour", 
+          too.far = 0.07, 
+          n.grid = 120, 
+          main = "",
+          bty = "n"
+          #,type = "response"
+          )
+  
+  sp::plot(gulf.shape, add= T,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         col = "gray",
+         bty="n")
+  
+   # par(new = T)
+    
+  #  plot(s2_orderd[[i]]$sharpnose$startlon,
+    #     s2_orderd[[i]]$sharpnose$startlat,
+    #   xlim = my_xlim, ylim = my_ylim,
+    #   xlab = "", ylab = "",
+    #   xaxt = "n", yaxt = "n",
+    #   pch = 20,
+    #   bty="n",
+     #  cex = cex_pts)
+    
+    #par(new=T)
+    
+   # plot(Zero_ordered[[i]]$sharpnose$startlon,
+    #     Zero_ordered[[i]]$sharpnose$startlat,
+    #     xlim = my_xlim, ylim = my_ylim,
+    #     xlab = "", ylab = "",
+    #     xaxt = "n", yaxt = "n",
+    #     pch = 21,
+    #     bty="n",
+    #     cex = cex_pts,
+    #     col = col_pts)
+    
+    ## x-axis
+    if(i == 4 | i == 8){
+      
+    axis(1,
+     at = x_ticks,
+     lwd = lwd_axis,
+     cex.axis = cex_axis)
+  
+    mtext("Longitude",
+      side = 1,
+      line = Lon_line,
+      cex = cex_mtxt)      
+      
+    }
+  if( i == 1 | i == 2 | i == 3 | i == 4){
+    
+        ## Y-axis (all plots)
+    axis(2,
+     at = y_ticks,
+     las = 2,
+     lwd = lwd_axis,
+     cex.axis = cex_axis)
+  
+    mtext("Latitude",
+      side = 2,
+      line = Lat_line,
+      cex = cex_mtxt)
+    
+  }
+    
+
+  
+}
+
+
+
+mtext("Presence",
+      side = 3, 
+      at = 1/4,
+      line = top_ln,
+      cex = top_cex,
+      outer = TRUE)
+        
+mtext("Abundance",
+      side = 3, 
+      at = 0.75,
+      line = top_ln,
+      cex = top_cex,
+      outer = TRUE)
+      
+mtext("Female Adult",
+      side = 2,
+      at = 7/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
+
+mtext("Female Juvenile",
+      side = 2,
+      at = 5/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
+
+mtext("Male Adult",
+      side = 2,
+      at = 3/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
+
+mtext("Male Juvenile",
+      side = 2,
+      at = 1/8,
+      line = l_ln,
+      cex = l_cex,
+      outer = TRUE)
+
+
+```
+
+[1] "sn_s1_FA_best" "sn_s1_FJ_best" "sn_s1_MA_best" "sn_s1_MJ_best"
+[5] "sn_s2_FA_best" "sn_s2_FJ_best" "sn_s2_MA_best" "sn_s2_MJ_best"
+
+```{r}
+par(mfrow = c(1,1))
+
+plot(strat2_Adult$Female$sharpnose$startlon,
+     strat2_Adult$Female$sharpnose$startlat,
+     pch = 19,
+     cex = 0.75,
+     xlim = my_xlim, ylim = my_ylim,
+     bty="n",
+     type = "n"
+     )
+
+  sp::plot(gulf.shape, add = T,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         col = "gray",
+         bty="n")
+  
+    vis.gam(mod_lst[[1]],
+          view = c("startlon", "startlat"),
+          xlim = my_xlim, ylim = my_ylim,
+          xlab = "", ylab = "",
+          #xaxt = "n", yaxt = "n",
+          plot.type = "contour", 
+          too.far = 0.09, 
+          #n.grid = 120, 
+          main = "",
+          bty = "n"
+          #,add=T
+          #,color = "bw"
+          ,type = "response"
+          ,cond = list(strat2_Adult$Female$sharpnose$startdepth,
+                       strat2_Adult$Female$sharpnose$turbbotm,
+                       strat2_Adult$Female$sharpnose$oxybotm)
+          )
+    par(new=T)
+    
+    plot(strat2_Adult$Female$sharpnose$startlon,
+     strat2_Adult$Female$sharpnose$startlat,
+     xaxt = "n", yaxt = "n",
+     pch = 19,
+     cex = 0.75,
+     xlim = my_xlim, ylim = my_ylim,
+     bty="n",
+     col.axis = "blue"
+     )
+    
+    par(new = T)
+    
+    plot(startlat ~ startlon,
+         data = strat1_Adult$Female$sharpnose[strat1_Adult$Female$sharpnose$pres==0,],
+         col = alpha("gray", 0.5),
+         pch = 19,
+         cex = 0.75,
+         bty = "n",
+         xlab = "", ylab = "", main = "",
+     xlim = my_xlim, ylim = my_ylim)
+  
+  
+```
+
+```{r}
+
+    vis.gam(mod_lst[[1]],
+          view = c("startlon", "startlat"),
+          xlim = my_xlim, ylim = my_ylim,
+          xlab = "", ylab = "",
+          xaxt = "n", yaxt = "n",
+          plot.type = "contour", 
+          too.far = 0.09, 
+          #n.grid = 120, 
+          main = "",
+          bty = "n"
+          #,add=T
+          #,color = "bw"
+          ,type = "response"
+          ,cond = list(strat2_Adult$Female$sharpnose$startdepth,
+                       strat2_Adult$Female$sharpnose$turbbotm,
+                       strat2_Adult$Female$sharpnose$oxybotm))
+          par(new = T)
+          
+    plot(strat2_Adult$Female$sharpnose$startlon,
+     strat2_Adult$Female$sharpnose$startlat,
+     pch = 19,
+     cex = 0.75,
+     xlim = my_xlim, ylim = my_ylim,
+     bty="n"
+     )
+    
+      sp::plot(gulf.shape, add = T,
+         xlim = my_xlim, ylim = my_ylim,
+         xlab = "", ylab = "",
+         xaxt = "n", yaxt = "n",
+         col = "gray",
+         bty="n")
+          
+          
+
+
+```
+
