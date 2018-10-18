@@ -1,0 +1,275 @@
+---
+title: "Year Residual Analysis - Selecting Model Structure"
+author: "Alex Benecke"
+date: "September 20, 2018"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 5    
+---
+
+```{r Load Packages, include=FALSE, eval=TRUE}
+
+### Load Packages
+library(FSA)
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(scales)
+library(mgcv)
+library(sciplot)
+
+### Load My Functions
+source("5_functions/dropbox_fn.R") # For interacting with dropbox
+proj = "shark" # Specify project where data is stored 
+
+source("5_functions/load_data.R")
+```
+
+```{r Load Data, echo=FALSE, include=FALSE, eval=TRUE}
+#### Load Combined Data ####
+eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj , na.strings = c(NA, "")) %>%
+  mutate(year = factor(year))
+str(eff3)
+
+#### Load Structured Data ####
+  ## Strata 1
+strat1_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 1)
+strat1_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 1)
+  ## Strata 2
+strat2_Adult <- load_data(data = eff3[eff3$maturity == "A",], strata = 2)
+strat2_Juvenile <- load_data(data = eff3[eff3$maturity == "J",], strata = 2)
+```
+
+
+The plan here is to decide if year should be included as a random effect factor variable or at all.
+
+
+I'll be using strat2 AdulT Male Sharpnose.
+```{r}
+
+dat <- strat2_Adult$Male$sharpnose
+str(dat)
+
+```
+
+
+
+```{r}
+par(mfrow = c(1,1))
+
+plot(CPUE ~ year,
+     data = eff3[eff3$CPUE>0,])
+
+plot(((CPUE-mean(CPUE))/sd(CPUE)) ~ year,
+     data = eff3[eff3$CPUE>0,])
+
+
+plot(CPUE ~ year,
+     data = dat)
+
+plot(((CPUE-mean(CPUE))/sd(CPUE)) ~ year,
+     data = dat)
+```
+
+
+
+
+
+```{r}
+glob_gam <- gam(CPUE ~ s(startlon, startlat, k = 50) +
+                  s(startdepth) +
+                  s(tempbotm) + 
+                  s(turbbotm) +
+                  s(oxybotm) +
+                  s(salbotm) + 
+                  s(Dis.to.Shore) +
+                  bottype4 + 
+                  year,
+                family = Gamma(link = log),
+                data = dat)
+
+
+glob_gam
+
+par(mfrow = c(2,2))
+gam.check(glob_gam)
+
+```
+
+
+
+```{r}
+glob_gam_log <- gam(log(CPUE +1) ~ s(startlon, startlat, k = 50) +
+                  s(startdepth) +
+                  s(tempbotm) + 
+                  s(turbbotm) +
+                  s(oxybotm) +
+                  s(salbotm) + 
+                  s(Dis.to.Shore) +
+                  bottype4 + 
+                  year,
+                family = Gamma(link = log),
+                data = dat)
+
+
+glob_gam_log
+
+par(mfrow = c(2,2))
+gam.check(glob_gam_log)
+```
+
+ so idk but I feel like log(CPUE) doesn't make a huge difference.
+ 
+ 
+ **residuals**
+ 
+```{r}
+glob_resid <- resid(glob_gam)
+par(mfrow = c(1,1))
+hist(glob_resid)
+
+plot(glob_resid~dat$year)
+```
+ 
+Doesn't look like there is much of a pattern in the residuals when Year is included as a factor variable.
+
+Lets see what happens when **year is left out**
+
+
+```{r}
+red_gam <- gam(CPUE ~ s(startlon, startlat, k = 50) +
+                  s(startdepth) +
+                  s(tempbotm) + 
+                  s(turbbotm) +
+                  s(oxybotm) +
+                  s(salbotm) + 
+                  s(Dis.to.Shore) +
+                  bottype4 ,
+                family = Gamma(link = log),
+                data = dat)
+
+
+red_gam
+
+par(mfrow = c(2,2))
+gam.check(red_gam)
+
+```
+
+```{r}
+red_resid <- resid(red_gam)
+par(mfrow = c(1,1))
+hist(red_resid)
+
+plot(red_resid~dat$year)
+```
+
+
+Looks like there is a little more variability in the residuals for each year but there doesn't appear to be any difference between years.
+
+
+**Year random effect**
+```{r}
+re_gam <- gam(CPUE ~ s(startlon, startlat, k = 50) +
+                  s(startdepth) +
+                  s(tempbotm) + 
+                  s(turbbotm) +
+                  s(oxybotm) +
+                  s(salbotm) + 
+                  s(Dis.to.Shore) +
+                  bottype4 + 
+                  s(year, bs = "re"),
+                family = Gamma(link = log),
+                data = dat)
+
+
+re_gam
+
+par(mfrow = c(2,2))
+gam.check(re_gam)
+```
+
+```{r}
+re_resid <- resid(re_gam)
+par(mfrow = c(1,1))
+hist(re_resid)
+
+plot(re_resid~dat$year)
+```
+
+
+**Year as numeric smooth** just for good measure and because it makes 4 plots
+```{r}
+
+#### Load Combined Data ####
+eff32 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj , na.strings = c(NA, "")) 
+str(eff32)
+
+#### Load Structured Data ####
+  ## Strata 1
+strat1_Adult2 <- load_data(data = eff32[eff32$maturity == "A",], strata = 1)
+strat1_Juvenile2 <- load_data(data = eff32[eff32$maturity == "J",], strata = 1)
+  ## Strata 2
+strat2_Adult2 <- load_data(data = eff32[eff32$maturity == "A",], strata = 2)
+strat2_Juvenile2 <- load_data(data = eff32[eff32$maturity == "J",], strata = 2)
+
+dat2 <- strat2_Adult2$Male$sharpnose
+str(dat2)
+
+
+yrsm_gam <- gam(CPUE ~ s(startlon, startlat, k = 50) +
+                  s(startdepth) +
+                  s(tempbotm) + 
+                  s(turbbotm) +
+                  s(oxybotm) +
+                  s(salbotm) + 
+                  s(Dis.to.Shore) +
+                  bottype4 + 
+                  s(year, k = 17),
+                family = Gamma(link = log),
+                data = dat2)
+
+
+yrsm_gam
+
+par(mfrow = c(2,2))
+gam.check(yrsm_gam)
+```
+
+```{r}
+yrsm_resid <- resid(yrsm_gam)
+par(mfrow = c(1,1))
+hist(yrsm_resid)
+
+plot(yrsm_resid~dat$year)
+```
+
+```{r}
+par(mfrow = c(2,2))
+
+plot(glob_resid~dat$year, main = "year linear pred (factor)")
+
+plot(re_resid~dat$year, main = "random effect Year")
+
+plot(red_resid~dat$year, main = "no year")
+
+
+
+plot(yrsm_resid~dat$year, main = "numeric year smooth")
+
+```
+
+
+
+Im not seeing a difference here between using year as a linear predictor or using year as a random effect. (Also these boxplots suggest there is no real difference in the residuals each year even when year is excluded although we do see a slight improvement with year included).
+
+```{r}
+AIC(glob_gam, re_gam, red_gam, yrsm_gam)
+
+anova.gam(glob_gam, re_gam, red_gam, yrsm_gam, test = "F")
+```
+
+Including year as a random effect improves our AIC slightly over the the model with year as a linear predictor ( $\Delta AIC = $ `r AIC(glob_gam, re_gam, red_gam, yrsm_gam)[1,2] - AIC(glob_gam, re_gam, red_gam, yrsm_gam)[2,2]`). It seems clear to me from the AIC that it is better to have year included than excluded (or included as a numeric smooth). Also I already included year as a random effect so I don't really want to go back and refit(Hope you concur).
+
