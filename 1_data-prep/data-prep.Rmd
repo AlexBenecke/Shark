@@ -85,9 +85,9 @@ unique(eff$month)
 ```
 
 
-### Distance to shore
+### Distance to shore (Skip 11-19-2018)
 
-```{r Load packages needed to create distance to shore variable, eval=FALSE}
+```{ Load packages needed to create distance to shore variable, eval=FALSE}
 require(rgdal)   # for readOGR(...); loads package sp as well
 require(rgeos)   # for gDistance(...)
 
@@ -99,7 +99,7 @@ require(doSNOW)    # for resisterDoSNOW(...)
 ```
 
 
-```{r Distance to Shore Variable, eval=FALSE}
+```{ Distance to Shore Variable, eval=FALSE}
 eff$Long <- eff$startlon
 eff$Lat <- eff$startlat
 
@@ -140,7 +140,7 @@ stopCluster(cl)
 ```
 
 
-```{r Plot points and shoreline, echo = FALSE}
+```{ Plot points and shoreline, echo = FALSE}
 
 gulf.shape <- "shape-file/Shape/stateshigh.shp"
 gulf.shape <- maptools::readShapePoly(gulf.shape)
@@ -162,7 +162,7 @@ sp::plot(gulf.shape, add= T,
 
 ```{r Create Species Sex and Maturity columns, eval=FALSE}
 
-###write.csv(eff,file = "eff.csv", row.names = FALSE)
+#write.csv(eff,file = "eff.csv", row.names = FALSE)
 #eff <- read.csv("eff.csv") ### bring in eff.csv
 
 str(eff)
@@ -172,7 +172,7 @@ str(eff)
     mutate(month = ordered(month,
                          levels = c("Jul", "Aug", "Sep", "Oct", "Nov") ) ) %>%
     select( stationkey, year, month, CPUE, startlat, startlon, 
-            startdepth, tempbotm, turbbotm, oxybotm, salbotm, Dis.to.Shore,
+            startdepth, tempbotm, turbbotm, oxybotm, salbotm, #Dis.to.Shore,
             bottype4, TAXON, fluorobotm, Adj.CPUE, start_gmt, bottype8 )
   
 str(red.df)
@@ -308,8 +308,8 @@ tail(red.df)
 
 red.df %<>% select( stationkey, year, month, common, sex, maturity, 
                   pres, CPUE, startlat, startlon, 
-                  startdepth, tempbotm, turbbotm, oxybotm, salbotm, Dis.to.Shore,
-                  bottype4, fluorobotm, bottype8, Adj.CPUE, start_gmt, species, TAXON, )
+                  startdepth, tempbotm, turbbotm, oxybotm, salbotm, #Dis.to.Shore,
+                  bottype4, fluorobotm, bottype8, Adj.CPUE, start_gmt, species, TAXON )
 
 
 ### check
@@ -321,7 +321,7 @@ tail(red.df)
 
 ```{r Create CPUE2.csv, eval=FALSE}
 
-#8-28-18#write_csv_fn( red.df, file = "data/raw-data/CPUE2.csv", row.names = FALSE, proj)
+#11-19-18#write_csv_fn( red.df, file = "data/raw-data/CPUE2.csv", row.names = FALSE, proj)
 
 ```
 
@@ -336,10 +336,10 @@ tail(red.df)
 
 eff2 <- read_csv_fn( "data/raw-data/CPUE2.csv", proj, na.strings = c(NA, "")) %>%
   mutate(stationkey = factor(stationkey),
-         year = factor(year, ordered = TRUE), 
+         year = factor(year), 
          month = ordered(month,
-                         levels = c("Jul", "Aug", "Sep", "Oct", "Nov") ),
-         pres = factor(pres)
+                         levels = c("Jul", "Aug", "Sep", "Oct", "Nov") )
+         #,pres = factor(pres)
          )
 
 str(eff2)
@@ -426,15 +426,15 @@ for(i in 1:length(sp.lst)){
                      3) ),
         side=3,line=0)
   
-  plot(CPUE ~ Dis.to.Shore,
-       data = sp.lst[[i]],
-       las=2)
-    mtext(paste0("r = ",
-               round(cor(sp.lst[[i]]$Dis.to.Shore,
-                         sp.lst[[i]]$CPUE,
-                         use = "complete.obs"),
-                     3)),
-        side=3,line=0)
+ # plot(CPUE ~ Dis.to.Shore,
+  #     data = sp.lst[[i]],
+   #    las=2)
+    #mtext(paste0("r = ",
+     #          round(cor(sp.lst[[i]]$Dis.to.Shore,
+      #                   sp.lst[[i]]$CPUE,
+       #                  use = "complete.obs"),
+        #             3)),
+        #side=3,line=0)
   
   plot(CPUE ~ bottype4,
        data = sp.lst[[i]],
@@ -574,9 +574,9 @@ for(i in 1:length(sp.lst)){
 }
 ```
 
-#### Fluorobotm
+#### Fluorobotm (Skip/Remove)
 
-```{r, echo=FALSE}
+```{, echo=FALSE}
 ### Fluorobotm
 
 for(i in 1:length(sp.lst)){
@@ -700,9 +700,9 @@ for(i in 1:length(sp.lst)){
 
 ```
 
-#### Distance to shore
+#### Distance to shore (Skip/removed)
 
-```{r, echo=FALSE}
+```{, echo=FALSE}
 ### Dis.to.Shore
 
 for(i in 1:length(sp.lst)){
@@ -762,7 +762,8 @@ Juveniles may occupy larger temperature range than adults
 #var_vec <- names(sp.lst[[1]][,c(1,3,4,6:13,15)])
 
 eff2 %>% select(tempbotm, startdepth, fluorobotm, turbbotm,
-                oxybotm, salbotm, Dis.to.Shore ) %>% summary()
+                oxybotm, salbotm #, Dis.to.Shore 
+                ) %>% summary()
 
 
 range(eff2$tempbotm, na.rm=TRUE) # 8.6 to 31.8 C
@@ -777,7 +778,7 @@ range(eff2$oxybotm, na.rm=TRUE) # 0 to 10.7
 
 range(eff2$salbotm, na.rm=TRUE) # 17.9 to 48.8
 
-range(eff2$Dis.to.Shore, na.rm=TRUE) # 2.15 to 236.5 km
+#range(eff2$Dis.to.Shore, na.rm=TRUE) # 2.15 to 236.5 km
 ```
 
 #### Lat Lon QA/QC
@@ -798,7 +799,7 @@ plot(CPUE ~ startdepth,
 
 ```
 
-```{r depth Nas, eval=FALSE, echo=FALSE,results='hide',fig.keep='last'}
+```{ depth Nas, eval=FALSE, echo=FALSE,results='hide',fig.keep='last'}
 (depth.NA <- which(is.na(eff2$startdepth) == TRUE))
 
 length(depth.NA)
@@ -829,30 +830,32 @@ unique(eff2$month, na.rm=TRUE) # July to november
 range(eff2$tempbotm, na.rm=TRUE) # 8.6 to 31.8 C
 # Range looks pretty reasonable
 
-rm.temp <- which(eff2$tempbotm < 9)
+#rm.temp <- which(eff2$tempbotm < 9)
+### Temp is Fin as is - Dr. Diggers
+
 
 par(mfrow = c(1,1))
 plot(CPUE ~ tempbotm,
-     data = eff2[-c(rm.temp),],
+     data = eff2,#[-c(rm.temp),],
      xlim = c(8,33), ylim = c(0,65),
      pch = 19,
      col = rgb(0,0,0, 0.15),
      main = "",
      bty = "n")
 
-abline(v = 9, lty = 3, col = "green")
+#abline(v = 9, lty = 3, col = "green")
 
-par(new = T)
+#par(new = T)
 
-plot(CPUE ~ tempbotm,
-     data = eff2[c(rm.temp),],
-     xlim = c(8,33), ylim = c(0,65),
-     xaxt = "n", yaxt = "n",
-     xlab = "", ylab = "",
-     pch = 19,
-     col = rgb(1,0,0, 0.15),
-     main = paste0(expression("n = "), eval(length(rm.temp)/49)," Station(s) ", "(or " , eval(length(rm.temp)), " lines of data)"),
-     bty = "n")
+#plot(CPUE ~ tempbotm,
+#     data = eff2[c(rm.temp),],
+#     xlim = c(8,33), ylim = c(0,65),
+#     xaxt = "n", yaxt = "n",
+#     xlab = "", ylab = "",
+#     pch = 19,
+#     col = rgb(1,0,0, 0.15),
+#     main = paste0(expression("n = "), eval(length(rm.temp)/49)," Station(s) ", "(or " , eval(length(rm.temp)), " lines of data)"),
+#     bty = "n")
 ```
 
 ```{r Temp Nas, echo=FALSE,results='hide',fig.keep='last'}
@@ -879,7 +882,7 @@ axis(1, at = 1:17,
 I will remove temperatures $less \ than \ 9 \ ^\circ{C}$. This comes out to be $n =$ `r length(rm.temp)/49` station(s). NAs in temp account for `r round( length(temp.NA)/nrow(eff2) * 100 , 2)` $\%$ of the data.
 
 
-#### Fluorobotm QA/QC
+#### Fluorobotm QA/QC 
 
 **Fluorobotom** IDK
 
@@ -954,18 +957,18 @@ plot(CPUE ~ turbbotm,
      xlim = c(0,125), ylim = c(0,70),
      data = eff2)
 
-abline(v = 0, lty = 2, col = "red")
-abline(v = 100, lty = 2, col = "red")
-abline(v = 104, lty = 2, col = "red")
+abline(v = 0.01, lty = 2, col = "red")
+#abline(v = 100, lty = 2, col = "red")
+abline(v = 105, lty = 2, col = "red")
 
 range(eff2$turbbotm , na.rm=T) # 0.0000 122.3585
 
 #(rm.Turb <- which(eff2$turbbotm > 100 | eff2$turbbotm <= 0)) # 27 individuals and 1323 lines
 #(rm.Turb <- which(eff2$turbbotm > 100 )) # 19 individuals  
 #(rm.Turb <- which(eff2$turbbotm > 104 )) # 5 individuals
-rm.Turb <- which(eff2$turbbotm > 110 ) # 1 individual
+rm.Turb <- which(eff2$turbbotm > 105 | eff2$turbbotm < 0.01) # 1 individual
 
-(n.rm.turb <- length(rm.Turb)/49) ### 1 individual
+(n.rm.turb <- length(rm.Turb)/49) ### 11 individual
 
 
 plot(CPUE ~ turbbotm,
@@ -975,10 +978,10 @@ plot(CPUE ~ turbbotm,
      col = rgb(0,0,0, 0.25))
 
 #abline(v = 0, lty = 3, col = "green")
-abline(v = 100, lty = 2, col = "red")
+abline(v = 0.01, lty = 2, col = "red")
 
-abline(v = 104, lty = 2, col = "red")
-abline(v = 110, lty = 3, col = "green")
+abline(v = 105, lty = 2, col = "red")
+#abline(v = 110, lty = 3, col = "green")
 
 par(new = T)
 
@@ -1093,12 +1096,12 @@ range(eff2$salbotm, na.rm = TRUE) # 17.9 to 48.8
 
       ## was less than 15
 #(rm.Sal <- which(eff2$salbotm > 40 | eff2$salbotm < 20)) ### 507  932 2705 2770 2771 2941 2979
-rm.Sal <- which(eff2$salbotm > 38 | eff2$salbotm < 23)
+rm.Sal <- which(eff2$salbotm > 40 | eff2$salbotm < 10)
 
 par(mfrow = c(1,1))
 plot(CPUE ~ salbotm,
      data = eff2[-c(rm.Sal),],
-     xlim = c(15, 50), ylim = c(0,70),
+     xlim = c(9, 50), ylim = c(0,70),
      pch = 19,
      col = rgb(0,0,0, 0.15),
      main = "",
@@ -1108,7 +1111,7 @@ par(new = T)
 
 plot(CPUE ~ jitter(salbotm, amount = 0.5),
      data = eff2[c(rm.Sal),],
-     xlim = c(15, 50), ylim = c(0,70),
+     xlim = c(9, 50), ylim = c(0,70),
      xlab = "", ylab = "",
      xaxt = "n", yaxt = "n",
      pch = 19,
@@ -1117,10 +1120,10 @@ plot(CPUE ~ jitter(salbotm, amount = 0.5),
      bty = "n" )
 
 abline(v = 40, col = "red", lty = 2)
-abline(v = 20, col = "red", lty = 2)
+abline(v = 10, col = "red", lty = 2)
 
-abline(v = 38, col = "green", lty = 3)
-abline(v = 23, col = "green", lty = 3)
+#abline(v = 38, col = "green", lty = 3)
+#abline(v = 23, col = "green", lty = 3)
 
 #text(x= eff2$salbotm[c(rm.Sal)], y = eff2$CPUE[c(rm.Sal)] ,
 #      labels = as.character(round(eff2$salbotm[c(rm.Sal)],1)),
@@ -1158,9 +1161,11 @@ I will remove salinity $less \ than \ 23$ and $greater \ than \ 38$ which will r
 
 #(rm.Fluo <-which(eff2$FLUOROBOTM > 30)) ### 1536, 1802, 2230, 2660, 2704
 
-(n.lines.rm <- length(rm.temp) + length(rm.Turb) + length(rm.Sal))
+(n.lines.rm <-   length(rm.Turb) + length(rm.Sal) #+ length(rm.temp)
+ )
 
-(n.rm <- (length(rm.temp) + length(rm.Turb) + length(rm.Sal))/49 ) ### individuals
+(n.rm <- ( length(rm.Turb) + length(rm.Sal) #+ length(rm.temp)
+           )/49 ) ### individuals
 
 ```
 
@@ -1168,7 +1173,8 @@ I will remove salinity $less \ than \ 23$ and $greater \ than \ 38$ which will r
 
 
   ### round 1 ###rm.EndLon
-rm1 <- c(rm.temp, rm.Turb, rm.Sal) %>%
+rm1 <- c( rm.Turb, rm.Sal#, rm.temp
+          ) %>%
    sort()
 
 length(rm1)
@@ -1183,7 +1189,7 @@ nrow(eff2)
 
 str(eff2)
 
-#8-28-18#write_csv_fn( eff2, file = "data/clean-data/CPUE3.csv", row.names = FALSE, proj)
+#11-19-18#write_csv_fn( eff2, file = "data/clean-data/CPUE3.csv", row.names = FALSE, proj)
 ```
 
 
@@ -1192,10 +1198,10 @@ str(eff2)
 ```{r load eff3}
 eff3 <- read_csv_fn( "data/clean-data/CPUE3.csv", proj) %>%
   mutate(stationkey = factor(stationkey),
-         year = factor(year, ordered = TRUE), 
+         year = factor(year), 
          month = ordered(month,
-                         levels = c("Jul", "Aug", "Sep", "Oct", "Nov") ),
-         pres = factor(pres)
+                         levels = c("Jul", "Aug", "Sep", "Oct", "Nov") )
+         #,pres = factor(pres)
          )
 
 
