@@ -65,6 +65,7 @@ gulf.shape <- maptools::readShapePoly(gulf.shape)
 filenames <- list.files("output/output_GAM/raster",
                         pattern = "*.Rdata",
                         full.names = TRUE)
+filenames <- filenames[c(9:12)]
 
 
 for(i in 1:length(filenames)){
@@ -74,7 +75,7 @@ for(i in 1:length(filenames)){
 }
 
 ### Figure Options
-layer <- 3
+layer <- 2
 
 cex_pts <- 1
 pch_pts <- "."
@@ -91,7 +92,7 @@ my_ylim = c(22,33)
 
 
 ### Sharpnose
-tiff(filename = "6_figures/figures/sharpnose_layer3.tiff", width = 3000,  height = 2000, res = 300)
+tiff(filename = "6_figures/figures/sharpnose_layer2.tiff", width = 3000,  height = 2000, res = 300)
 
 par(mfrow = c(2,2),
     oma = c(0,2,2,1),

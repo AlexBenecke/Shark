@@ -97,8 +97,8 @@ load(file = "output/output_GAM/poly..rda")
 
 ### Function to load data and create and save raster containing the heatmaps
 
-
-for(i in 8){#1:length(filenames_s1)){
+    ### currently only using sharpnose models (9-12) due to different variables being in the data frame
+for(i in 9:12){#1:length(filenames_s1)){
   
   
   SP <- str_split(filenames_s1[i], "_", simplify = TRUE)[1,2] %>%
@@ -164,7 +164,27 @@ save( raster_sharpnose_FJ, file = "output/output_GAM/raster/raster_sharpnose_FJ.
 save( raster_sharpnose_MA, file = "output/output_GAM/raster/raster_sharpnose_MA.Rdata")
 save( raster_sharpnose_MJ, file = "output/output_GAM/raster/raster_sharpnose_MJ.Rdata")
 
-
+# Warning messages:
+# 1: package ‘fields’ was built under R version 3.5.1
+# 2: package ‘spam’ was built under R version 3.5.1
+# 3: package ‘dotCall64’ was built under R version 3.5.1
+# 4: package ‘maps’ was built under R version 3.5.1
+# 5: In x@data@values[i] <- value :
+#   number of items to replace is not a multiple of replacement length
+# 6: In x@data@values[i] <- value :
+#   number of items to replace is not a multiple of replacement length
+# 7: In x@data@values[i] <- value :
+#   number of items to replace is not a multiple of replacement length
+# 8: In x@data@values[i] <- value :
+#   number of items to replace is not a multiple of replacement length
+# 9: In x@data@values[i] <- value :
+#   number of items to replace is not a multiple of replacement length
+# 10: In x@data@values[i] <- value :
+#   number of items to replace is not a multiple of replacement length
+# 11: In x@data@values[i] <- value :
+#   number of items to replace is not a multiple of replacement length
+# 12: In x@data@values[i] <- value :
+#   number of items to replace is not a multiple of replacement length
 
 
 
